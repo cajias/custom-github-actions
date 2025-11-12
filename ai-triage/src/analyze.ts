@@ -119,8 +119,8 @@ async function callGitHubModels(
 ): Promise<string> {
   core.debug('Calling GitHub Models API...');
 
-  // GitHub Models API endpoint
-  const endpoint = 'https://models.inference.ai.azure.com/chat/completions';
+  // GitHub Models API endpoint (new endpoint as of May 2025)
+  const endpoint = 'https://models.github.ai/inference/chat/completions';
 
   // Prepare request body
   const body = {
@@ -149,6 +149,7 @@ async function callGitHubModels(
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28', // Required for GitHub Models API
       },
       body: JSON.stringify(body),
     });

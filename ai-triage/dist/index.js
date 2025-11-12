@@ -30060,8 +30060,8 @@ Analyze this issue and provide triage information in JSON format.`;
  */
 async function callGitHubModels(model, systemPrompt, userPrompt) {
     core.debug('Calling GitHub Models API...');
-    // GitHub Models API endpoint
-    const endpoint = 'https://models.inference.ai.azure.com/chat/completions';
+    // GitHub Models API endpoint (new endpoint as of May 2025)
+    const endpoint = 'https://models.github.ai/inference/chat/completions';
     // Prepare request body
     const body = {
         messages: [
@@ -30087,6 +30087,7 @@ async function callGitHubModels(model, systemPrompt, userPrompt) {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
+                'X-GitHub-Api-Version': '2022-11-28', // Required for GitHub Models API
             },
             body: JSON.stringify(body),
         });
