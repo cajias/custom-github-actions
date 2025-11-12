@@ -23,7 +23,7 @@ export async function analyzeIssue(
   const userPrompt = buildUserPrompt(issue.title, issue.body || '', ctx);
 
   // Call GitHub Models API
-  const response = await callGitHubModels(ctx, model, systemPrompt, userPrompt);
+  const response = await callGitHubModels(model, systemPrompt, userPrompt);
 
   // Parse and validate response
   const analysis = parseAIResponse(response);
@@ -113,12 +113,14 @@ Analyze this issue and provide triage information in JSON format.`;
  * Call GitHub Models inference API
  */
 async function callGitHubModels(
-  ctx: ActionContext,
   model: string,
   systemPrompt: string,
   userPrompt: string
 ): Promise<string> {
   core.debug('Calling GitHub Models API...');
+
+  // GitHub Models API endpoint
+  const endpoint = 'https://models.inference.ai.azure.com/chat/completions';
 
   // Prepare request body
   const body = {
@@ -138,15 +140,25 @@ async function callGitHubModels(
   };
 
   try {
-    // Use octokit request for authenticated API call
-    const response = await ctx.octokit.request('POST /models/chat/completions', {
+    // Get GitHub token from context
+    const token = core.getInput('token', { required: true });
+
+    // Make direct fetch request with Bearer auth
+    const response = await fetch(endpoint, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-      data: body,
+      body: JSON.stringify(body),
     });
 
-    const result = response.data as any;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    const result = await response.json() as any;
 
     if (!result.choices || result.choices.length === 0) {
       throw new Error('No response from AI model');
@@ -158,9 +170,6 @@ async function callGitHubModels(
     return content;
   } catch (error: any) {
     core.error(`GitHub Models API error: ${error.message}`);
-    if (error.response) {
-      core.error(`Response: ${JSON.stringify(error.response.data, null, 2)}`);
-    }
     throw new Error(`Failed to call GitHub Models API: ${error.message}`);
   }
 }

@@ -29978,7 +29978,7 @@ async function analyzeIssue(ctx, model = 'openai/gpt-4o') {
     const systemPrompt = buildSystemPrompt();
     const userPrompt = buildUserPrompt(issue.title, issue.body || '', ctx);
     // Call GitHub Models API
-    const response = await callGitHubModels(ctx, model, systemPrompt, userPrompt);
+    const response = await callGitHubModels(model, systemPrompt, userPrompt);
     // Parse and validate response
     const analysis = parseAIResponse(response);
     core.info('✅ Issue analysis complete');
@@ -30058,8 +30058,10 @@ Analyze this issue and provide triage information in JSON format.`;
 /**
  * Call GitHub Models inference API
  */
-async function callGitHubModels(ctx, model, systemPrompt, userPrompt) {
+async function callGitHubModels(model, systemPrompt, userPrompt) {
     core.debug('Calling GitHub Models API...');
+    // GitHub Models API endpoint
+    const endpoint = 'https://models.inference.ai.azure.com/chat/completions';
     // Prepare request body
     const body = {
         messages: [
@@ -30077,14 +30079,22 @@ async function callGitHubModels(ctx, model, systemPrompt, userPrompt) {
         max_tokens: 2000,
     };
     try {
-        // Use octokit request for authenticated API call
-        const response = await ctx.octokit.request('POST /models/chat/completions', {
+        // Get GitHub token from context
+        const token = core.getInput('token', { required: true });
+        // Make direct fetch request with Bearer auth
+        const response = await fetch(endpoint, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
-            data: body,
+            body: JSON.stringify(body),
         });
-        const result = response.data;
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        const result = await response.json();
         if (!result.choices || result.choices.length === 0) {
             throw new Error('No response from AI model');
         }
@@ -30094,9 +30104,6 @@ async function callGitHubModels(ctx, model, systemPrompt, userPrompt) {
     }
     catch (error) {
         core.error(`GitHub Models API error: ${error.message}`);
-        if (error.response) {
-            core.error(`Response: ${JSON.stringify(error.response.data, null, 2)}`);
-        }
         throw new Error(`Failed to call GitHub Models API: ${error.message}`);
     }
 }
