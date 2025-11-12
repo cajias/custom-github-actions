@@ -120,9 +120,6 @@ async function callGitHubModels(
 ): Promise<string> {
   core.debug('Calling GitHub Models API...');
 
-  // GitHub Models API endpoint
-  const endpoint = 'https://models.inference.ai.azure.com/chat/completions';
-
   // Prepare request body
   const body = {
     messages: [

@@ -25,7 +25,7 @@ export async function updateProjectFields(
   const fields = await getProjectFields(ctx, projectConfig);
 
   // Add issue to project
-  const itemId = await addIssueToProject(ctx, projectConfig, fields.projectId);
+  const itemId = await addIssueToProject(ctx, fields.projectId);
 
   // Update fields
   await updateStatus(ctx, fields, itemId, analysis.is_agent_ready);
@@ -108,7 +108,6 @@ async function getProjectFields(
  */
 async function addIssueToProject(
   ctx: ActionContext,
-  projectConfig: ProjectConfig,
   projectId: string
 ): Promise<string> {
   core.info('Adding issue to project...');
