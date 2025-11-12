@@ -1,0 +1,50 @@
+name: 'AI Issue Triage'
+description: 'AI-powered GitHub issue triage using GitHub Models'
+author: 'cajias'
+
+branding:
+  icon: 'zap'
+  color: 'purple'
+
+inputs:
+  token:
+    description: 'GitHub token with permissions for issues, projects, and models'
+    required: true
+    default: ${{ github.token }}
+
+  model:
+    description: 'GitHub Models model to use for analysis'
+    required: false
+    default: 'openai/gpt-4o'
+
+  project-owner:
+    description: 'GitHub username/org that owns the project (optional)'
+    required: false
+    default: ''
+
+  project-number:
+    description: 'Project number to update (optional)'
+    required: false
+    default: ''
+
+  skip-trigger-check:
+    description: 'Skip default trigger checking (advanced: runs on all events)'
+    required: false
+    default: 'false'
+
+outputs:
+  is-agent-ready:
+    description: 'Whether the issue is ready for an AI agent to implement'
+
+  priority:
+    description: 'Assigned priority (P0, P1, or P2)'
+
+  size:
+    description: 'Size estimate (XS, S, M, L, or XL)'
+
+  labels:
+    description: 'Comma-separated list of applied labels'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
