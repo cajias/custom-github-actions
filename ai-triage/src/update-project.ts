@@ -2,14 +2,14 @@
  * Update GitHub Project V2 fields
  */
 
-import * as core from '@actions/core';
+import * as core from "@actions/core";
 import {
   ActionContext,
   TriageAnalysis,
   ProjectConfig,
   ProjectFields,
   ProjectSingleSelectField,
-} from './types';
+} from "./types";
 
 /**
  * Add issue to project and update fields
@@ -17,9 +17,9 @@ import {
 export async function updateProjectFields(
   ctx: ActionContext,
   analysis: TriageAnalysis,
-  projectConfig: ProjectConfig
+  projectConfig: ProjectConfig,
 ): Promise<void> {
-  core.info('Updating project fields...');
+  core.info("Updating project fields...");
 
   // Get project fields
   const fields = await getProjectFields(ctx, projectConfig);
@@ -32,7 +32,7 @@ export async function updateProjectFields(
   await updatePriority(ctx, fields, itemId, analysis.priority);
   await updateSize(ctx, fields, itemId, analysis.size);
 
-  core.info('✅ Project fields updated');
+  core.info("✅ Project fields updated");
 }
 
 /**
@@ -40,7 +40,7 @@ export async function updateProjectFields(
  */
 async function getProjectFields(
   ctx: ActionContext,
-  projectConfig: ProjectConfig
+  projectConfig: ProjectConfig,
 ): Promise<ProjectFields> {
   core.info(`Fetching project fields for project #${projectConfig.number}...`);
 
@@ -80,20 +80,22 @@ async function getProjectFields(
   const fieldNodes = project.fields.nodes;
 
   const statusField = fieldNodes.find(
-    (f: any) => f.name === 'Status'
+    (f: any) => f.name === "Status",
   ) as ProjectSingleSelectField;
   const priorityField = fieldNodes.find(
-    (f: any) => f.name === 'Priority'
+    (f: any) => f.name === "Priority",
   ) as ProjectSingleSelectField;
   const sizeField = fieldNodes.find(
-    (f: any) => f.name === 'Size'
+    (f: any) => f.name === "Size",
   ) as ProjectSingleSelectField;
 
   if (!statusField || !priorityField || !sizeField) {
-    throw new Error('Required project fields not found (Status, Priority, Size)');
+    throw new Error(
+      "Required project fields not found (Status, Priority, Size)",
+    );
   }
 
-  core.info('✅ Project fields fetched');
+  core.info("✅ Project fields fetched");
 
   return {
     projectId,
@@ -108,9 +110,9 @@ async function getProjectFields(
  */
 async function addIssueToProject(
   ctx: ActionContext,
-  projectId: string
+  projectId: string,
 ): Promise<string> {
-  core.info('Adding issue to project...');
+  core.info("Adding issue to project...");
 
   const mutation = `
     mutation($projectId: ID!, $contentId: ID!) {
@@ -124,7 +126,7 @@ async function addIssueToProject(
 
   const issueNodeId = ctx.context.payload.issue?.node_id;
   if (!issueNodeId) {
-    throw new Error('Issue node_id not found in context');
+    throw new Error("Issue node_id not found in context");
   }
 
   const result: any = await ctx.octokit.graphql(mutation, {
@@ -145,10 +147,12 @@ async function updateStatus(
   ctx: ActionContext,
   fields: ProjectFields,
   itemId: string,
-  isAgentReady: boolean
+  isAgentReady: boolean,
 ): Promise<void> {
-  const targetStatus = isAgentReady ? 'Ready' : 'Backlog';
-  const statusOption = fields.status.options.find((o) => o.name === targetStatus);
+  const targetStatus = isAgentReady ? "Ready" : "Backlog";
+  const statusOption = fields.status.options.find(
+    (o) => o.name === targetStatus,
+  );
 
   if (!statusOption) {
     core.warning(`Status option "${targetStatus}" not found`);
@@ -160,7 +164,7 @@ async function updateStatus(
     fields.projectId,
     itemId,
     fields.status.id,
-    statusOption.id
+    statusOption.id,
   );
 
   core.info(`Set status to: ${targetStatus}`);
@@ -173,9 +177,11 @@ async function updatePriority(
   ctx: ActionContext,
   fields: ProjectFields,
   itemId: string,
-  priority: string
+  priority: string,
 ): Promise<void> {
-  const priorityOption = fields.priority.options.find((o) => o.name === priority);
+  const priorityOption = fields.priority.options.find(
+    (o) => o.name === priority,
+  );
 
   if (!priorityOption) {
     core.warning(`Priority option "${priority}" not found`);
@@ -187,7 +193,7 @@ async function updatePriority(
     fields.projectId,
     itemId,
     fields.priority.id,
-    priorityOption.id
+    priorityOption.id,
   );
 
   core.info(`Set priority to: ${priority}`);
@@ -200,7 +206,7 @@ async function updateSize(
   ctx: ActionContext,
   fields: ProjectFields,
   itemId: string,
-  size: string
+  size: string,
 ): Promise<void> {
   const sizeOption = fields.size.options.find((o) => o.name === size);
 
@@ -214,7 +220,7 @@ async function updateSize(
     fields.projectId,
     itemId,
     fields.size.id,
-    sizeOption.id
+    sizeOption.id,
   );
 
   core.info(`Set size to: ${size}`);
@@ -228,7 +234,7 @@ async function updateSingleSelectField(
   projectId: string,
   itemId: string,
   fieldId: string,
-  optionId: string
+  optionId: string,
 ): Promise<void> {
   const mutation = `
     mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!) {

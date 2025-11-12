@@ -13,9 +13,19 @@ inputs:
     default: ${{ github.token }}
 
   model:
-    description: 'GitHub Models model to use for analysis'
+    description: 'Model to use for analysis (auto-detects provider from name)'
     required: false
-    default: 'openai/gpt-4o'
+    default: 'xai/grok-3-mini'
+
+  anthropic-api-key:
+    description: 'Anthropic API key (required for Claude models)'
+    required: false
+    default: ''
+
+  openai-api-key:
+    description: 'OpenAI API key (required for GPT models)'
+    required: false
+    default: ''
 
   project-owner:
     description: 'GitHub username/org that owns the project (optional)'

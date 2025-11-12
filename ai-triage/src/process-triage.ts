@@ -2,17 +2,17 @@
  * Process triage analysis and update GitHub issue
  */
 
-import * as core from '@actions/core';
-import { ActionContext, TriageAnalysis } from './types';
+import * as core from "@actions/core";
+import { ActionContext, TriageAnalysis } from "./types";
 
 /**
  * Process the AI triage analysis and update the issue accordingly
  */
 export async function processTriageAnalysis(
   ctx: ActionContext,
-  analysis: TriageAnalysis
+  analysis: TriageAnalysis,
 ): Promise<void> {
-  core.info('Processing triage analysis...');
+  core.info("Processing triage analysis...");
   core.info(`Agent ready: ${analysis.is_agent_ready}`);
   core.info(`Priority: ${analysis.priority}`);
   core.info(`Size: ${analysis.size}`);
@@ -30,7 +30,7 @@ export async function processTriageAnalysis(
   // 3. Remove needs-triage label if present
   await removeTriageLabel(ctx);
 
-  core.info('✅ Triage processing complete');
+  core.info("✅ Triage processing complete");
 }
 
 /**
@@ -38,14 +38,14 @@ export async function processTriageAnalysis(
  */
 async function applyLabels(
   ctx: ActionContext,
-  analysis: TriageAnalysis
+  analysis: TriageAnalysis,
 ): Promise<void> {
   if (analysis.labels.length === 0) {
-    core.info('No labels to apply');
+    core.info("No labels to apply");
     return;
   }
 
-  core.info(`Applying labels: ${analysis.labels.join(', ')}`);
+  core.info(`Applying labels: ${analysis.labels.join(", ")}`);
 
   await ctx.octokit.rest.issues.addLabels({
     owner: ctx.owner,
@@ -60,9 +60,9 @@ async function applyLabels(
  */
 async function handleNotAgentReady(
   ctx: ActionContext,
-  analysis: TriageAnalysis
+  analysis: TriageAnalysis,
 ): Promise<void> {
-  core.info('Issue is not agent-ready');
+  core.info("Issue is not agent-ready");
 
   // If we have clarifying questions, post them
   if (
@@ -71,7 +71,7 @@ async function handleNotAgentReady(
   ) {
     const questions = analysis.clarifying_questions
       .map((q, i) => `${i + 1}. ${q}`)
-      .join('\n');
+      .join("\n");
 
     const body =
       `🤖 **AI Triage: Clarification Needed**\n\n` +
@@ -87,7 +87,7 @@ async function handleNotAgentReady(
       body,
     });
 
-    core.info('Posted clarifying questions');
+    core.info("Posted clarifying questions");
   }
 
   // If we have an enhanced description, update the issue body
@@ -111,7 +111,7 @@ async function handleNotAgentReady(
       body,
     });
 
-    core.info('Enhanced issue description');
+    core.info("Enhanced issue description");
   }
 }
 
@@ -120,37 +120,29 @@ async function handleNotAgentReady(
  */
 async function handleAgentReady(
   ctx: ActionContext,
-  analysis: TriageAnalysis
+  analysis: TriageAnalysis,
 ): Promise<void> {
-  core.info('Issue is agent-ready');
+  core.info("Issue is agent-ready");
 
   // Add ready-for-review label
   await ctx.octokit.rest.issues.addLabels({
     owner: ctx.owner,
     repo: ctx.repo,
     issue_number: ctx.issueNumber,
-    labels: ['status:ready-for-review'],
+    labels: ["status:ready-for-review"],
   });
 
   // Create summary comment
   const relatedIssues =
     analysis.related_issues.length > 0
-      ? `**Related Issues:** ${analysis.related_issues.map((n) => `#${n}`).join(', ')}\n`
-      : '';
+      ? `**Related Issues:** ${analysis.related_issues.map((n) => `#${n}`).join(", ")}\n`
+      : "";
 
   const suggestedAssignee = analysis.suggested_assignee
     ? `**Suggested Assignee:** @${analysis.suggested_assignee}\n`
-    : '';
+    : "";
 
-  const body =
-    `✅ **AI Triage: Agent Ready**\n\n` +
-    `This issue is well-defined and ready for implementation.\n\n` +
-    `**Priority:** ${analysis.priority}\n` +
-    `**Size Estimate:** ${analysis.size}\n` +
-    `**Labels Applied:** ${analysis.labels.join(', ')}\n` +
-    relatedIssues +
-    suggestedAssignee +
-    `\n**Reasoning:** ${analysis.reasoning}`;
+  const body = `✅ **AI Triage: Agent Ready**\n\nThis issue is well-defined and ready for implementation.\n\n**Priority:** ${analysis.priority}\n**Size Estimate:** ${analysis.size}\n**Labels Applied:** ${analysis.labels.join(", ")}\n${relatedIssues}${suggestedAssignee}\n**Reasoning:** ${analysis.reasoning}`;
 
   await ctx.octokit.rest.issues.createComment({
     owner: ctx.owner,
@@ -159,7 +151,7 @@ async function handleAgentReady(
     body,
   });
 
-  core.info('Marked issue as agent-ready');
+  core.info("Marked issue as agent-ready");
 }
 
 /**
@@ -171,11 +163,11 @@ async function removeTriageLabel(ctx: ActionContext): Promise<void> {
       owner: ctx.owner,
       repo: ctx.repo,
       issue_number: ctx.issueNumber,
-      name: 'needs-triage',
+      name: "needs-triage",
     });
-    core.info('Removed needs-triage label');
+    core.info("Removed needs-triage label");
   } catch (error) {
     // Label might not exist, ignore
-    core.debug('needs-triage label not present or already removed');
+    core.debug("needs-triage label not present or already removed");
   }
 }

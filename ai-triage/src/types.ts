@@ -2,12 +2,12 @@
  * Type definitions for AI-powered issue triage
  */
 
-import { GitHub } from '@actions/github/lib/utils';
-import * as github from '@actions/github';
+import { GitHub } from "@actions/github/lib/utils";
+import * as github from "@actions/github";
 
-export type Priority = 'P0' | 'P1' | 'P2';
-export type Size = 'XS' | 'S' | 'M' | 'L' | 'XL';
-export type Status = 'Backlog' | 'Ready' | 'In progress' | 'In review' | 'Done';
+export type Priority = "P0" | "P1" | "P2";
+export type Size = "XS" | "S" | "M" | "L" | "XL";
+export type Status = "Backlog" | "Ready" | "In progress" | "In review" | "Done";
 
 /**
  * Analysis result from AI model
