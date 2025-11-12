@@ -1,34 +1,46 @@
 /**
- * AI-powered issue analysis using GitHub Models
+ * AI-powered issue analysis using multiple model providers
  */
 
-import * as core from '@actions/core';
-import { ActionContext, TriageAnalysis } from './types';
+import * as core from "@actions/core";
+import { ActionContext, TriageAnalysis } from "./types";
+import { getModelConfig, callModel } from "./model-providers";
 
 /**
- * Analyze issue using GitHub Models API
+ * Analyze issue using AI model (supports multiple providers)
  */
 export async function analyzeIssue(
   ctx: ActionContext,
-  model: string = 'openai/gpt-4o'
+  model: string,
+  anthropicKey: string,
+  openaiKey: string,
+  githubToken: string,
 ): Promise<TriageAnalysis> {
   core.info(`Analyzing issue #${ctx.issueNumber} with ${model}...`);
 
   const issue = ctx.context.payload.issue;
   if (!issue) {
-    throw new Error('Issue not found in context');
+    throw new Error("Issue not found in context");
   }
 
   const systemPrompt = buildSystemPrompt();
-  const userPrompt = buildUserPrompt(issue.title, issue.body || '', ctx);
+  const userPrompt = buildUserPrompt(issue.title, issue.body || "", ctx);
 
-  // Call GitHub Models API
-  const response = await callGitHubModels(model, systemPrompt, userPrompt);
+  // Get model configuration and validate API keys
+  const config = getModelConfig(model, anthropicKey, openaiKey);
+
+  // Call the appropriate AI provider
+  const response = await callModel(
+    config,
+    systemPrompt,
+    userPrompt,
+    githubToken,
+  );
 
   // Parse and validate response
   const analysis = parseAIResponse(response);
 
-  core.info('✅ Issue analysis complete');
+  core.info("✅ Issue analysis complete");
   return analysis;
 }
 
@@ -96,7 +108,7 @@ Return ONLY valid JSON, no markdown formatting.`;
 function buildUserPrompt(
   title: string,
   body: string,
-  ctx: ActionContext
+  ctx: ActionContext,
 ): string {
   return `**Issue Title:** ${title}
 
@@ -110,80 +122,14 @@ Analyze this issue and provide triage information in JSON format.`;
 }
 
 /**
- * Call GitHub Models inference API
- */
-async function callGitHubModels(
-  model: string,
-  systemPrompt: string,
-  userPrompt: string
-): Promise<string> {
-  core.debug('Calling GitHub Models API...');
-
-  // GitHub Models API endpoint (new endpoint as of May 2025)
-  const endpoint = 'https://models.github.ai/inference/chat/completions';
-
-  // Prepare request body
-  const body = {
-    messages: [
-      {
-        role: 'system',
-        content: systemPrompt,
-      },
-      {
-        role: 'user',
-        content: userPrompt,
-      },
-    ],
-    model: model,
-    temperature: 0.3, // Lower temperature for more consistent output
-    max_tokens: 2000,
-  };
-
-  try {
-    // Get GitHub token from context
-    const token = core.getInput('token', { required: true });
-
-    // Make direct fetch request with Bearer auth
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28', // Required for GitHub Models API
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-
-    const result = await response.json() as any;
-
-    if (!result.choices || result.choices.length === 0) {
-      throw new Error('No response from AI model');
-    }
-
-    const content = result.choices[0].message.content;
-    core.debug(`AI response: ${content}`);
-
-    return content;
-  } catch (error: any) {
-    core.error(`GitHub Models API error: ${error.message}`);
-    throw new Error(`Failed to call GitHub Models API: ${error.message}`);
-  }
-}
-
-/**
  * Parse AI response and validate structure
  */
 function parseAIResponse(response: string): TriageAnalysis {
   try {
     // Remove markdown code blocks if present
     const cleaned = response
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
       .trim();
 
     const parsed = JSON.parse(cleaned) as TriageAnalysis;
@@ -195,7 +141,7 @@ function parseAIResponse(response: string): TriageAnalysis {
   } catch (error) {
     core.error(`Failed to parse AI response: ${error}`);
     core.error(`Raw response: ${response}`);
-    throw new Error('AI returned invalid JSON response');
+    throw new Error("AI returned invalid JSON response");
   }
 }
 
@@ -204,13 +150,13 @@ function parseAIResponse(response: string): TriageAnalysis {
  */
 function validateAnalysis(analysis: any): asserts analysis is TriageAnalysis {
   const requiredFields = [
-    'is_agent_ready',
-    'labels',
-    'priority',
-    'size',
-    'related_issues',
-    'clarifying_questions',
-    'reasoning',
+    "is_agent_ready",
+    "labels",
+    "priority",
+    "size",
+    "related_issues",
+    "clarifying_questions",
+    "reasoning",
   ];
 
   for (const field of requiredFields) {
@@ -220,31 +166,31 @@ function validateAnalysis(analysis: any): asserts analysis is TriageAnalysis {
   }
 
   // Validate types
-  if (typeof analysis.is_agent_ready !== 'boolean') {
-    throw new Error('is_agent_ready must be a boolean');
+  if (typeof analysis.is_agent_ready !== "boolean") {
+    throw new Error("is_agent_ready must be a boolean");
   }
 
   if (!Array.isArray(analysis.labels)) {
-    throw new Error('labels must be an array');
+    throw new Error("labels must be an array");
   }
 
-  if (!['P0', 'P1', 'P2'].includes(analysis.priority)) {
-    throw new Error('priority must be P0, P1, or P2');
+  if (!["P0", "P1", "P2"].includes(analysis.priority)) {
+    throw new Error("priority must be P0, P1, or P2");
   }
 
-  if (!['XS', 'S', 'M', 'L', 'XL'].includes(analysis.size)) {
-    throw new Error('size must be XS, S, M, L, or XL');
+  if (!["XS", "S", "M", "L", "XL"].includes(analysis.size)) {
+    throw new Error("size must be XS, S, M, L, or XL");
   }
 
   if (!Array.isArray(analysis.related_issues)) {
-    throw new Error('related_issues must be an array');
+    throw new Error("related_issues must be an array");
   }
 
   if (!Array.isArray(analysis.clarifying_questions)) {
-    throw new Error('clarifying_questions must be an array');
+    throw new Error("clarifying_questions must be an array");
   }
 
-  if (typeof analysis.reasoning !== 'string') {
-    throw new Error('reasoning must be a string');
+  if (typeof analysis.reasoning !== "string") {
+    throw new Error("reasoning must be a string");
   }
 }

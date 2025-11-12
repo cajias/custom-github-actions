@@ -29928,7 +29928,7 @@ function wrappy (fn, cb) {
 "use strict";
 
 /**
- * AI-powered issue analysis using GitHub Models
+ * AI-powered issue analysis using multiple model providers
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -29966,22 +29966,25 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.analyzeIssue = analyzeIssue;
 const core = __importStar(__nccwpck_require__(7484));
+const model_providers_1 = __nccwpck_require__(1585);
 /**
- * Analyze issue using GitHub Models API
+ * Analyze issue using AI model (supports multiple providers)
  */
-async function analyzeIssue(ctx, model = 'openai/gpt-4o') {
+async function analyzeIssue(ctx, model, anthropicKey, openaiKey, githubToken) {
     core.info(`Analyzing issue #${ctx.issueNumber} with ${model}...`);
     const issue = ctx.context.payload.issue;
     if (!issue) {
-        throw new Error('Issue not found in context');
+        throw new Error("Issue not found in context");
     }
     const systemPrompt = buildSystemPrompt();
-    const userPrompt = buildUserPrompt(issue.title, issue.body || '', ctx);
-    // Call GitHub Models API
-    const response = await callGitHubModels(model, systemPrompt, userPrompt);
+    const userPrompt = buildUserPrompt(issue.title, issue.body || "", ctx);
+    // Get model configuration and validate API keys
+    const config = (0, model_providers_1.getModelConfig)(model, anthropicKey, openaiKey);
+    // Call the appropriate AI provider
+    const response = await (0, model_providers_1.callModel)(config, systemPrompt, userPrompt, githubToken);
     // Parse and validate response
     const analysis = parseAIResponse(response);
-    core.info('✅ Issue analysis complete');
+    core.info("✅ Issue analysis complete");
     return analysis;
 }
 /**
@@ -30056,67 +30059,14 @@ ${body}
 Analyze this issue and provide triage information in JSON format.`;
 }
 /**
- * Call GitHub Models inference API
- */
-async function callGitHubModels(model, systemPrompt, userPrompt) {
-    core.debug('Calling GitHub Models API...');
-    // GitHub Models API endpoint (new endpoint as of May 2025)
-    const endpoint = 'https://models.github.ai/inference/chat/completions';
-    // Prepare request body
-    const body = {
-        messages: [
-            {
-                role: 'system',
-                content: systemPrompt,
-            },
-            {
-                role: 'user',
-                content: userPrompt,
-            },
-        ],
-        model: model,
-        temperature: 0.3, // Lower temperature for more consistent output
-        max_tokens: 2000,
-    };
-    try {
-        // Get GitHub token from context
-        const token = core.getInput('token', { required: true });
-        // Make direct fetch request with Bearer auth
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'X-GitHub-Api-Version': '2022-11-28', // Required for GitHub Models API
-            },
-            body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        const result = await response.json();
-        if (!result.choices || result.choices.length === 0) {
-            throw new Error('No response from AI model');
-        }
-        const content = result.choices[0].message.content;
-        core.debug(`AI response: ${content}`);
-        return content;
-    }
-    catch (error) {
-        core.error(`GitHub Models API error: ${error.message}`);
-        throw new Error(`Failed to call GitHub Models API: ${error.message}`);
-    }
-}
-/**
  * Parse AI response and validate structure
  */
 function parseAIResponse(response) {
     try {
         // Remove markdown code blocks if present
         const cleaned = response
-            .replace(/```json\n?/g, '')
-            .replace(/```\n?/g, '')
+            .replace(/```json\n?/g, "")
+            .replace(/```\n?/g, "")
             .trim();
         const parsed = JSON.parse(cleaned);
         // Validate required fields
@@ -30126,7 +30076,7 @@ function parseAIResponse(response) {
     catch (error) {
         core.error(`Failed to parse AI response: ${error}`);
         core.error(`Raw response: ${response}`);
-        throw new Error('AI returned invalid JSON response');
+        throw new Error("AI returned invalid JSON response");
     }
 }
 /**
@@ -30134,13 +30084,13 @@ function parseAIResponse(response) {
  */
 function validateAnalysis(analysis) {
     const requiredFields = [
-        'is_agent_ready',
-        'labels',
-        'priority',
-        'size',
-        'related_issues',
-        'clarifying_questions',
-        'reasoning',
+        "is_agent_ready",
+        "labels",
+        "priority",
+        "size",
+        "related_issues",
+        "clarifying_questions",
+        "reasoning",
     ];
     for (const field of requiredFields) {
         if (!(field in analysis)) {
@@ -30148,26 +30098,26 @@ function validateAnalysis(analysis) {
         }
     }
     // Validate types
-    if (typeof analysis.is_agent_ready !== 'boolean') {
-        throw new Error('is_agent_ready must be a boolean');
+    if (typeof analysis.is_agent_ready !== "boolean") {
+        throw new Error("is_agent_ready must be a boolean");
     }
     if (!Array.isArray(analysis.labels)) {
-        throw new Error('labels must be an array');
+        throw new Error("labels must be an array");
     }
-    if (!['P0', 'P1', 'P2'].includes(analysis.priority)) {
-        throw new Error('priority must be P0, P1, or P2');
+    if (!["P0", "P1", "P2"].includes(analysis.priority)) {
+        throw new Error("priority must be P0, P1, or P2");
     }
-    if (!['XS', 'S', 'M', 'L', 'XL'].includes(analysis.size)) {
-        throw new Error('size must be XS, S, M, L, or XL');
+    if (!["XS", "S", "M", "L", "XL"].includes(analysis.size)) {
+        throw new Error("size must be XS, S, M, L, or XL");
     }
     if (!Array.isArray(analysis.related_issues)) {
-        throw new Error('related_issues must be an array');
+        throw new Error("related_issues must be an array");
     }
     if (!Array.isArray(analysis.clarifying_questions)) {
-        throw new Error('clarifying_questions must be an array');
+        throw new Error("clarifying_questions must be an array");
     }
-    if (typeof analysis.reasoning !== 'string') {
-        throw new Error('reasoning must be a string');
+    if (typeof analysis.reasoning !== "string") {
+        throw new Error("reasoning must be a string");
     }
 }
 
@@ -30235,19 +30185,19 @@ function shouldRunTriage(context) {
     const action = context.payload.action;
     const issue = context.payload.issue;
     // Trigger 1: Issue opened
-    if (action === 'opened') {
-        core.info('✅ Trigger: Issue opened');
+    if (action === "opened") {
+        core.info("✅ Trigger: Issue opened");
         return true;
     }
     // Trigger 2 & 3: Check for specific labels
-    if (action === 'labeled' && issue?.labels) {
+    if (action === "labeled" && issue?.labels) {
         const labels = issue.labels.map((l) => l.name);
-        if (labels.includes('needs-triage')) {
-            core.info('✅ Trigger: needs-triage label added');
+        if (labels.includes("needs-triage")) {
+            core.info("✅ Trigger: needs-triage label added");
             return true;
         }
-        if (labels.includes('triage:backlog')) {
-            core.info('✅ Trigger: triage:backlog label added');
+        if (labels.includes("triage:backlog")) {
+            core.info("✅ Trigger: triage:backlog label added");
             return true;
         }
     }
@@ -30259,17 +30209,19 @@ function shouldRunTriage(context) {
 async function run() {
     try {
         // Get inputs
-        const token = core.getInput('token', { required: true });
-        const model = core.getInput('model') || 'openai/gpt-4o';
-        const projectOwner = core.getInput('project-owner');
-        const projectNumber = core.getInput('project-number');
-        const skipTriggerCheck = core.getInput('skip-trigger-check') === 'true';
+        const token = core.getInput("token", { required: true });
+        const model = core.getInput("model") || "xai/grok-3-mini";
+        const anthropicKey = core.getInput("anthropic-api-key") || "";
+        const openaiKey = core.getInput("openai-api-key") || "";
+        const projectOwner = core.getInput("project-owner");
+        const projectNumber = core.getInput("project-number");
+        const skipTriggerCheck = core.getInput("skip-trigger-check") === "true";
         // Initialize GitHub client
         const octokit = github.getOctokit(token);
         const context = github.context;
         // Validate context
         if (!context.payload.issue) {
-            throw new Error('This action must be triggered by an issue event');
+            throw new Error("This action must be triggered by an issue event");
         }
         const issueNumber = context.payload.issue.number;
         const owner = context.repo.owner;
@@ -30277,8 +30229,8 @@ async function run() {
         core.info(`Processing issue #${issueNumber} in ${owner}/${repo}`);
         // Check default triggers (unless skipped)
         if (!skipTriggerCheck && !shouldRunTriage(context)) {
-            core.info('⏭️  Skipping: Does not match default triggers');
-            core.info('Triggers: issue opened, or labels: needs-triage, triage:backlog');
+            core.info("⏭️  Skipping: Does not match default triggers");
+            core.info("Triggers: issue opened, or labels: needs-triage, triage:backlog");
             return;
         }
         // Create action context
@@ -30290,8 +30242,8 @@ async function run() {
             repo,
         };
         // Analyze issue with AI
-        const analysis = await (0, analyze_1.analyzeIssue)(ctx, model);
-        core.info('AI analysis complete');
+        const analysis = await (0, analyze_1.analyzeIssue)(ctx, model, anthropicKey, openaiKey, token);
+        core.info("AI analysis complete");
         core.debug(`Analysis: ${JSON.stringify(analysis, null, 2)}`);
         // Process triage (update issue, add labels, post comments)
         await (0, process_triage_1.processTriageAnalysis)(ctx, analysis);
@@ -30304,26 +30256,277 @@ async function run() {
             await (0, update_project_1.updateProjectFields)(ctx, analysis, projectConfig);
         }
         else {
-            core.info('Project configuration not provided, skipping project update');
+            core.info("Project configuration not provided, skipping project update");
         }
         // Set outputs
-        core.setOutput('is-agent-ready', analysis.is_agent_ready);
-        core.setOutput('priority', analysis.priority);
-        core.setOutput('size', analysis.size);
-        core.setOutput('labels', analysis.labels.join(','));
-        core.info('✅ Triage complete!');
+        core.setOutput("is-agent-ready", analysis.is_agent_ready);
+        core.setOutput("priority", analysis.priority);
+        core.setOutput("size", analysis.size);
+        core.setOutput("labels", analysis.labels.join(","));
+        core.info("✅ Triage complete!");
     }
     catch (error) {
         if (error instanceof Error) {
             core.setFailed(error.message);
         }
         else {
-            core.setFailed('An unknown error occurred');
+            core.setFailed("An unknown error occurred");
         }
     }
 }
 // Run the action
 run();
+
+
+/***/ }),
+
+/***/ 1585:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Multi-provider AI model support
+ * Supports GitHub Models, Anthropic, and OpenAI
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.detectProvider = detectProvider;
+exports.getModelConfig = getModelConfig;
+exports.callModel = callModel;
+const core = __importStar(__nccwpck_require__(7484));
+/**
+ * Detect model provider from model name
+ */
+function detectProvider(modelName) {
+    const normalized = modelName.toLowerCase();
+    // Claude models → Anthropic
+    if (normalized.startsWith("claude-")) {
+        return "anthropic";
+    }
+    // GPT models → OpenAI
+    if (normalized.startsWith("gpt-") || normalized.startsWith("o1-")) {
+        return "openai";
+    }
+    // Default to GitHub Models (handles xai/*, meta-llama/*, etc.)
+    return "github";
+}
+/**
+ * Get model configuration with validation
+ */
+function getModelConfig(model, anthropicKey, openaiKey) {
+    const provider = detectProvider(model);
+    const config = {
+        provider,
+        model,
+    };
+    // Validate API keys for providers that need them
+    if (provider === "anthropic") {
+        if (!anthropicKey) {
+            throw new Error(`Model '${model}' requires an Anthropic API key. ` +
+                `Please provide 'anthropic-api-key' input. ` +
+                `Get your API key at: https://console.anthropic.com/`);
+        }
+        config.apiKey = anthropicKey;
+    }
+    else if (provider === "openai") {
+        if (!openaiKey) {
+            throw new Error(`Model '${model}' requires an OpenAI API key. ` +
+                `Please provide 'openai-api-key' input. ` +
+                `Get your API key at: https://platform.openai.com/api-keys`);
+        }
+        config.apiKey = openaiKey;
+    }
+    core.info(`Using ${provider} provider for model: ${model}`);
+    return config;
+}
+/**
+ * Call the appropriate AI model based on provider
+ */
+async function callModel(config, systemPrompt, userPrompt, githubToken) {
+    switch (config.provider) {
+        case "anthropic":
+            return callAnthropicAPI(config.model, config.apiKey, systemPrompt, userPrompt);
+        case "openai":
+            return callOpenAIAPI(config.model, config.apiKey, systemPrompt, userPrompt);
+        case "github":
+            return callGitHubModels(config.model, githubToken, systemPrompt, userPrompt);
+        default:
+            throw new Error(`Unknown provider: ${config.provider}`);
+    }
+}
+/**
+ * Call Anthropic API (for Claude models)
+ */
+async function callAnthropicAPI(model, apiKey, systemPrompt, userPrompt) {
+    core.debug("Calling Anthropic API...");
+    const endpoint = "https://api.anthropic.com/v1/messages";
+    const body = {
+        model,
+        max_tokens: 2000,
+        system: systemPrompt,
+        messages: [
+            {
+                role: "user",
+                content: userPrompt,
+            },
+        ],
+        temperature: 0.3,
+    };
+    try {
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-api-key": apiKey,
+                "anthropic-version": "2023-06-01",
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        const result = (await response.json());
+        if (!result.content || result.content.length === 0) {
+            throw new Error("No response from Anthropic API");
+        }
+        const content = result.content[0].text;
+        core.debug(`Anthropic response: ${content}`);
+        return content;
+    }
+    catch (error) {
+        core.error(`Anthropic API error: ${error.message}`);
+        throw new Error(`Failed to call Anthropic API: ${error.message}`);
+    }
+}
+/**
+ * Call OpenAI API (for GPT models)
+ */
+async function callOpenAIAPI(model, apiKey, systemPrompt, userPrompt) {
+    core.debug("Calling OpenAI API...");
+    const endpoint = "https://api.openai.com/v1/chat/completions";
+    const body = {
+        model,
+        messages: [
+            {
+                role: "system",
+                content: systemPrompt,
+            },
+            {
+                role: "user",
+                content: userPrompt,
+            },
+        ],
+        temperature: 0.3,
+        max_tokens: 2000,
+    };
+    try {
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        const result = (await response.json());
+        if (!result.choices || result.choices.length === 0) {
+            throw new Error("No response from OpenAI API");
+        }
+        const content = result.choices[0].message.content;
+        core.debug(`OpenAI response: ${content}`);
+        return content;
+    }
+    catch (error) {
+        core.error(`OpenAI API error: ${error.message}`);
+        throw new Error(`Failed to call OpenAI API: ${error.message}`);
+    }
+}
+/**
+ * Call GitHub Models API (for Grok and other free models)
+ */
+async function callGitHubModels(model, githubToken, systemPrompt, userPrompt) {
+    core.debug("Calling GitHub Models API...");
+    const endpoint = "https://models.github.ai/inference/chat/completions";
+    const body = {
+        messages: [
+            {
+                role: "system",
+                content: systemPrompt,
+            },
+            {
+                role: "user",
+                content: userPrompt,
+            },
+        ],
+        model,
+        temperature: 0.3,
+        max_tokens: 2000,
+    };
+    try {
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${githubToken}`,
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        const result = (await response.json());
+        if (!result.choices || result.choices.length === 0) {
+            throw new Error("No response from GitHub Models API");
+        }
+        const content = result.choices[0].message.content;
+        core.debug(`GitHub Models response: ${content}`);
+        return content;
+    }
+    catch (error) {
+        core.error(`GitHub Models API error: ${error.message}`);
+        throw new Error(`Failed to call GitHub Models API: ${error.message}`);
+    }
+}
 
 
 /***/ }),
@@ -30376,7 +30579,7 @@ const core = __importStar(__nccwpck_require__(7484));
  * Process the AI triage analysis and update the issue accordingly
  */
 async function processTriageAnalysis(ctx, analysis) {
-    core.info('Processing triage analysis...');
+    core.info("Processing triage analysis...");
     core.info(`Agent ready: ${analysis.is_agent_ready}`);
     core.info(`Priority: ${analysis.priority}`);
     core.info(`Size: ${analysis.size}`);
@@ -30391,17 +30594,17 @@ async function processTriageAnalysis(ctx, analysis) {
     }
     // 3. Remove needs-triage label if present
     await removeTriageLabel(ctx);
-    core.info('✅ Triage processing complete');
+    core.info("✅ Triage processing complete");
 }
 /**
  * Apply labels to the issue
  */
 async function applyLabels(ctx, analysis) {
     if (analysis.labels.length === 0) {
-        core.info('No labels to apply');
+        core.info("No labels to apply");
         return;
     }
-    core.info(`Applying labels: ${analysis.labels.join(', ')}`);
+    core.info(`Applying labels: ${analysis.labels.join(", ")}`);
     await ctx.octokit.rest.issues.addLabels({
         owner: ctx.owner,
         repo: ctx.repo,
@@ -30413,13 +30616,13 @@ async function applyLabels(ctx, analysis) {
  * Handle issue that is NOT agent-ready
  */
 async function handleNotAgentReady(ctx, analysis) {
-    core.info('Issue is not agent-ready');
+    core.info("Issue is not agent-ready");
     // If we have clarifying questions, post them
     if (analysis.clarifying_questions &&
         analysis.clarifying_questions.length > 0) {
         const questions = analysis.clarifying_questions
             .map((q, i) => `${i + 1}. ${q}`)
-            .join('\n');
+            .join("\n");
         const body = `🤖 **AI Triage: Clarification Needed**\n\n` +
             `This issue needs more details before it can be assigned to an agent. ` +
             `Please provide the following information:\n\n${questions}\n\n` +
@@ -30431,7 +30634,7 @@ async function handleNotAgentReady(ctx, analysis) {
             issue_number: ctx.issueNumber,
             body,
         });
-        core.info('Posted clarifying questions');
+        core.info("Posted clarifying questions");
     }
     // If we have an enhanced description, update the issue body
     if (analysis.enhanced_description) {
@@ -30450,43 +30653,36 @@ async function handleNotAgentReady(ctx, analysis) {
             issue_number: ctx.issueNumber,
             body,
         });
-        core.info('Enhanced issue description');
+        core.info("Enhanced issue description");
     }
 }
 /**
  * Handle issue that IS agent-ready
  */
 async function handleAgentReady(ctx, analysis) {
-    core.info('Issue is agent-ready');
+    core.info("Issue is agent-ready");
     // Add ready-for-review label
     await ctx.octokit.rest.issues.addLabels({
         owner: ctx.owner,
         repo: ctx.repo,
         issue_number: ctx.issueNumber,
-        labels: ['status:ready-for-review'],
+        labels: ["status:ready-for-review"],
     });
     // Create summary comment
     const relatedIssues = analysis.related_issues.length > 0
-        ? `**Related Issues:** ${analysis.related_issues.map((n) => `#${n}`).join(', ')}\n`
-        : '';
+        ? `**Related Issues:** ${analysis.related_issues.map((n) => `#${n}`).join(", ")}\n`
+        : "";
     const suggestedAssignee = analysis.suggested_assignee
         ? `**Suggested Assignee:** @${analysis.suggested_assignee}\n`
-        : '';
-    const body = `✅ **AI Triage: Agent Ready**\n\n` +
-        `This issue is well-defined and ready for implementation.\n\n` +
-        `**Priority:** ${analysis.priority}\n` +
-        `**Size Estimate:** ${analysis.size}\n` +
-        `**Labels Applied:** ${analysis.labels.join(', ')}\n` +
-        relatedIssues +
-        suggestedAssignee +
-        `\n**Reasoning:** ${analysis.reasoning}`;
+        : "";
+    const body = `✅ **AI Triage: Agent Ready**\n\nThis issue is well-defined and ready for implementation.\n\n**Priority:** ${analysis.priority}\n**Size Estimate:** ${analysis.size}\n**Labels Applied:** ${analysis.labels.join(", ")}\n${relatedIssues}${suggestedAssignee}\n**Reasoning:** ${analysis.reasoning}`;
     await ctx.octokit.rest.issues.createComment({
         owner: ctx.owner,
         repo: ctx.repo,
         issue_number: ctx.issueNumber,
         body,
     });
-    core.info('Marked issue as agent-ready');
+    core.info("Marked issue as agent-ready");
 }
 /**
  * Remove the needs-triage label
@@ -30497,13 +30693,13 @@ async function removeTriageLabel(ctx) {
             owner: ctx.owner,
             repo: ctx.repo,
             issue_number: ctx.issueNumber,
-            name: 'needs-triage',
+            name: "needs-triage",
         });
-        core.info('Removed needs-triage label');
+        core.info("Removed needs-triage label");
     }
     catch (error) {
         // Label might not exist, ignore
-        core.debug('needs-triage label not present or already removed');
+        core.debug("needs-triage label not present or already removed");
     }
 }
 
@@ -30558,7 +30754,7 @@ const core = __importStar(__nccwpck_require__(7484));
  * Add issue to project and update fields
  */
 async function updateProjectFields(ctx, analysis, projectConfig) {
-    core.info('Updating project fields...');
+    core.info("Updating project fields...");
     // Get project fields
     const fields = await getProjectFields(ctx, projectConfig);
     // Add issue to project
@@ -30567,7 +30763,7 @@ async function updateProjectFields(ctx, analysis, projectConfig) {
     await updateStatus(ctx, fields, itemId, analysis.is_agent_ready);
     await updatePriority(ctx, fields, itemId, analysis.priority);
     await updateSize(ctx, fields, itemId, analysis.size);
-    core.info('✅ Project fields updated');
+    core.info("✅ Project fields updated");
 }
 /**
  * Fetch project fields and their IDs
@@ -30606,13 +30802,13 @@ async function getProjectFields(ctx, projectConfig) {
     const project = result.user.projectV2;
     const projectId = project.id;
     const fieldNodes = project.fields.nodes;
-    const statusField = fieldNodes.find((f) => f.name === 'Status');
-    const priorityField = fieldNodes.find((f) => f.name === 'Priority');
-    const sizeField = fieldNodes.find((f) => f.name === 'Size');
+    const statusField = fieldNodes.find((f) => f.name === "Status");
+    const priorityField = fieldNodes.find((f) => f.name === "Priority");
+    const sizeField = fieldNodes.find((f) => f.name === "Size");
     if (!statusField || !priorityField || !sizeField) {
-        throw new Error('Required project fields not found (Status, Priority, Size)');
+        throw new Error("Required project fields not found (Status, Priority, Size)");
     }
-    core.info('✅ Project fields fetched');
+    core.info("✅ Project fields fetched");
     return {
         projectId,
         status: statusField,
@@ -30624,7 +30820,7 @@ async function getProjectFields(ctx, projectConfig) {
  * Add issue to project
  */
 async function addIssueToProject(ctx, projectId) {
-    core.info('Adding issue to project...');
+    core.info("Adding issue to project...");
     const mutation = `
     mutation($projectId: ID!, $contentId: ID!) {
       addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
@@ -30636,7 +30832,7 @@ async function addIssueToProject(ctx, projectId) {
   `;
     const issueNodeId = ctx.context.payload.issue?.node_id;
     if (!issueNodeId) {
-        throw new Error('Issue node_id not found in context');
+        throw new Error("Issue node_id not found in context");
     }
     const result = await ctx.octokit.graphql(mutation, {
         projectId,
@@ -30650,7 +30846,7 @@ async function addIssueToProject(ctx, projectId) {
  * Update Status field
  */
 async function updateStatus(ctx, fields, itemId, isAgentReady) {
-    const targetStatus = isAgentReady ? 'Ready' : 'Backlog';
+    const targetStatus = isAgentReady ? "Ready" : "Backlog";
     const statusOption = fields.status.options.find((o) => o.name === targetStatus);
     if (!statusOption) {
         core.warning(`Status option "${targetStatus}" not found`);

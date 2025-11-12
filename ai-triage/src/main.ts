@@ -9,12 +9,12 @@
  * - Update project board fields
  */
 
-import * as core from '@actions/core';
-import * as github from '@actions/github';
-import { analyzeIssue } from './analyze';
-import { processTriageAnalysis } from './process-triage';
-import { updateProjectFields } from './update-project';
-import { ActionContext, ProjectConfig } from './types';
+import * as core from "@actions/core";
+import * as github from "@actions/github";
+import { analyzeIssue } from "./analyze";
+import { processTriageAnalysis } from "./process-triage";
+import { updateProjectFields } from "./update-project";
+import { ActionContext, ProjectConfig } from "./types";
 
 /**
  * Check if the action should run based on default triggers
@@ -24,22 +24,22 @@ function shouldRunTriage(context: typeof github.context): boolean {
   const issue = context.payload.issue;
 
   // Trigger 1: Issue opened
-  if (action === 'opened') {
-    core.info('✅ Trigger: Issue opened');
+  if (action === "opened") {
+    core.info("✅ Trigger: Issue opened");
     return true;
   }
 
   // Trigger 2 & 3: Check for specific labels
-  if (action === 'labeled' && issue?.labels) {
+  if (action === "labeled" && issue?.labels) {
     const labels = issue.labels.map((l: any) => l.name);
 
-    if (labels.includes('needs-triage')) {
-      core.info('✅ Trigger: needs-triage label added');
+    if (labels.includes("needs-triage")) {
+      core.info("✅ Trigger: needs-triage label added");
       return true;
     }
 
-    if (labels.includes('triage:backlog')) {
-      core.info('✅ Trigger: triage:backlog label added');
+    if (labels.includes("triage:backlog")) {
+      core.info("✅ Trigger: triage:backlog label added");
       return true;
     }
   }
@@ -53,11 +53,13 @@ function shouldRunTriage(context: typeof github.context): boolean {
 async function run(): Promise<void> {
   try {
     // Get inputs
-    const token = core.getInput('token', { required: true });
-    const model = core.getInput('model') || 'openai/gpt-4o';
-    const projectOwner = core.getInput('project-owner');
-    const projectNumber = core.getInput('project-number');
-    const skipTriggerCheck = core.getInput('skip-trigger-check') === 'true';
+    const token = core.getInput("token", { required: true });
+    const model = core.getInput("model") || "xai/grok-3-mini";
+    const anthropicKey = core.getInput("anthropic-api-key") || "";
+    const openaiKey = core.getInput("openai-api-key") || "";
+    const projectOwner = core.getInput("project-owner");
+    const projectNumber = core.getInput("project-number");
+    const skipTriggerCheck = core.getInput("skip-trigger-check") === "true";
 
     // Initialize GitHub client
     const octokit = github.getOctokit(token);
@@ -65,7 +67,7 @@ async function run(): Promise<void> {
 
     // Validate context
     if (!context.payload.issue) {
-      throw new Error('This action must be triggered by an issue event');
+      throw new Error("This action must be triggered by an issue event");
     }
 
     const issueNumber = context.payload.issue.number;
@@ -76,8 +78,10 @@ async function run(): Promise<void> {
 
     // Check default triggers (unless skipped)
     if (!skipTriggerCheck && !shouldRunTriage(context)) {
-      core.info('⏭️  Skipping: Does not match default triggers');
-      core.info('Triggers: issue opened, or labels: needs-triage, triage:backlog');
+      core.info("⏭️  Skipping: Does not match default triggers");
+      core.info(
+        "Triggers: issue opened, or labels: needs-triage, triage:backlog",
+      );
       return;
     }
 
@@ -91,8 +95,14 @@ async function run(): Promise<void> {
     };
 
     // Analyze issue with AI
-    const analysis = await analyzeIssue(ctx, model);
-    core.info('AI analysis complete');
+    const analysis = await analyzeIssue(
+      ctx,
+      model,
+      anthropicKey,
+      openaiKey,
+      token,
+    );
+    core.info("AI analysis complete");
     core.debug(`Analysis: ${JSON.stringify(analysis, null, 2)}`);
 
     // Process triage (update issue, add labels, post comments)
@@ -107,21 +117,21 @@ async function run(): Promise<void> {
 
       await updateProjectFields(ctx, analysis, projectConfig);
     } else {
-      core.info('Project configuration not provided, skipping project update');
+      core.info("Project configuration not provided, skipping project update");
     }
 
     // Set outputs
-    core.setOutput('is-agent-ready', analysis.is_agent_ready);
-    core.setOutput('priority', analysis.priority);
-    core.setOutput('size', analysis.size);
-    core.setOutput('labels', analysis.labels.join(','));
+    core.setOutput("is-agent-ready", analysis.is_agent_ready);
+    core.setOutput("priority", analysis.priority);
+    core.setOutput("size", analysis.size);
+    core.setOutput("labels", analysis.labels.join(","));
 
-    core.info('✅ Triage complete!');
+    core.info("✅ Triage complete!");
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error.message);
     } else {
-      core.setFailed('An unknown error occurred');
+      core.setFailed("An unknown error occurred");
     }
   }
 }

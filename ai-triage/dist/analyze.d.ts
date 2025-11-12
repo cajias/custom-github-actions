@@ -1,8 +1,8 @@
 /**
- * AI-powered issue analysis using GitHub Models
+ * AI-powered issue analysis using multiple model providers
  */
-import { ActionContext, TriageAnalysis } from './types';
+import { ActionContext, TriageAnalysis } from "./types";
 /**
- * Analyze issue using GitHub Models API
+ * Analyze issue using AI model (supports multiple providers)
  */
-export declare function analyzeIssue(ctx: ActionContext, model?: string): Promise<TriageAnalysis>;
+export declare function analyzeIssue(ctx: ActionContext, model: string, anthropicKey: string, openaiKey: string, githubToken: string): Promise<TriageAnalysis>;

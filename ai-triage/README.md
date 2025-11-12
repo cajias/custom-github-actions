@@ -1,6 +1,6 @@
 # AI Issue Triage Action
 
-AI-powered GitHub issue triage using GitHub Models. This action automatically analyzes new issues and:
+AI-powered GitHub issue triage using multiple AI providers. This action automatically analyzes new issues and:
 
 - **Applies appropriate labels** (type, scope, priority)
 - **Sets priority and size estimates** for project management
@@ -11,15 +11,45 @@ AI-powered GitHub issue triage using GitHub Models. This action automatically an
 ## Features
 
 - ✅ **Type-safe TypeScript** implementation
-- ✅ **GitHub Models integration** (uses built-in `GITHUB_TOKEN`, no external API keys)
+- ✅ **Multi-provider support** - GitHub Models (free), Anthropic (Claude), OpenAI (GPT)
+- ✅ **Smart provider detection** - Auto-detects provider from model name
 - ✅ **Project V2 API support** for automatic board updates
 - ✅ **Smart analysis** determines if issues are ready for AI agents
 - ✅ **Automatic enhancement** of issue descriptions
 - ✅ **Clarifying questions** posted as comments when needed
 
+## Model Providers
+
+This action supports three AI providers:
+
+### 1. GitHub Models (Free) ✨
+**No API key required** - Uses your `GITHUB_TOKEN`
+
+Available models:
+- `xai/grok-3` - Latest Grok model
+- `xai/grok-3-mini` - Faster, lighter Grok (default)
+
+### 2. Anthropic (Claude) 🤖
+**Requires API key** from [Anthropic Console](https://console.anthropic.com/)
+
+Available models:
+- `claude-3-5-sonnet-20241022` - Latest Claude 3.5 Sonnet
+- `claude-3-5-haiku-20241022` - Faster, more affordable
+- `claude-3-opus-20240229` - Most capable
+
+**Note:** While GitHub Copilot Pro provides Claude access in IDEs, it's **not available** via GitHub Models API. To use Claude in this action, you need a separate Anthropic API key.
+
+### 3. OpenAI (GPT) 🧠
+**Requires API key** from [OpenAI Platform](https://platform.openai.com/api-keys)
+
+Available models:
+- `gpt-4o` - Latest GPT-4 with vision
+- `gpt-4o-mini` - Faster, more affordable
+- `gpt-4-turbo` - Previous generation
+
 ## Quick Start
 
-### Recommended Setup (Copy & Paste)
+### Basic Setup (Free - GitHub Models)
 
 Create `.github/workflows/ai-issue-triage.yml`:
 
@@ -44,6 +74,7 @@ jobs:
         uses: cajias/custom-github-actions/ai-triage@main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Uses xai/grok-3-mini by default (free)
 ```
 
 That's it! 🎉
@@ -52,6 +83,40 @@ The action automatically handles trigger logic internally and will only run when
 - ✅ Issue is opened
 - ✅ `needs-triage` label is added
 - ✅ `triage:backlog` label is added
+
+### Using Claude (Anthropic)
+
+```yaml
+    steps:
+      - name: AI Issue Triage with Claude
+        uses: cajias/custom-github-actions/ai-triage@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          model: claude-3-5-sonnet-20241022
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+**Setup:**
+1. Get API key from [Anthropic Console](https://console.anthropic.com/)
+2. Add it to your repository secrets as `ANTHROPIC_API_KEY`
+3. Use any `claude-*` model name
+
+### Using GPT (OpenAI)
+
+```yaml
+    steps:
+      - name: AI Issue Triage with GPT
+        uses: cajias/custom-github-actions/ai-triage@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          model: gpt-4o-mini
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+```
+
+**Setup:**
+1. Get API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Add it to your repository secrets as `OPENAI_API_KEY`
+3. Use any `gpt-*` model name
 
 ### With Project Board Integration (Optional)
 
@@ -78,19 +143,6 @@ The action automatically handles trigger logic internally and will only run when
 - Click on your project
 - The URL will be: `https://github.com/users/YOUR_USERNAME/projects/4` ← **4 is your project number**
 
-### Advanced: Custom AI Model
-
-```yaml
-    steps:
-      - name: AI Issue Triage
-        uses: cajias/custom-github-actions/ai-triage@main
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          model: anthropic/claude-3.5-sonnet  # Use different model
-          project-owner: your-username
-          project-number: 4
-```
-
 ## Default Triggers
 
 The action includes built-in trigger logic and automatically runs when:
@@ -108,20 +160,35 @@ The action checks these conditions internally, so you don't need `if` conditions
 | Name | Description | Required | Default |
 |------|-------------|----------|---------|
 | `token` | GitHub token with issues/projects/models permissions | Yes | `${{ github.token }}` |
-| `model` | GitHub Models model to use | No | `openai/gpt-4o` |
+| `model` | AI model to use (auto-detects provider) | No | `xai/grok-3-mini` |
+| `anthropic-api-key` | Anthropic API key (required for Claude models) | No | `''` |
+| `openai-api-key` | OpenAI API key (required for GPT models) | No | `''` |
 | `project-owner` | Owner of the GitHub project (for board integration) | No | `''` |
 | `project-number` | Project number to update (for board integration) | No | `''` |
 | `skip-trigger-check` | Skip default trigger checking (advanced) | No | `false` |
 
 **Note:** `project-owner` and `project-number` are only needed if you want automatic GitHub Project board updates (Status, Priority, Size fields). The action works without them - it will still analyze issues, apply labels, and post comments.
 
-### Available Models
+### Model Selection Guide
 
-- `openai/gpt-4o` (recommended, default)
-- `openai/gpt-4o-mini`
-- `anthropic/claude-3.5-sonnet`
-- `meta-llama/llama-3.1-70b-instruct`
-- Other models from [GitHub Models catalog](https://github.com/marketplace/models)
+**Which provider should I use?**
+
+- **GitHub Models (Free)** - Best for getting started, no API key needed
+  - `xai/grok-3-mini` (default, fast)
+  - `xai/grok-3` (more capable)
+  
+- **Anthropic (Claude)** - Best for complex analysis, requires API key
+  - `claude-3-5-sonnet-20241022` (highest quality)
+  - `claude-3-5-haiku-20241022` (faster, cheaper)
+  
+- **OpenAI (GPT)** - Industry standard, requires API key
+  - `gpt-4o` (latest, most capable)
+  - `gpt-4o-mini` (faster, cheaper)
+
+**Provider Auto-Detection:**
+- Model names starting with `claude-` → Anthropic
+- Model names starting with `gpt-` or `o1-` → OpenAI
+- Everything else → GitHub Models
 
 ## Outputs
 
