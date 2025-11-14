@@ -115,12 +115,13 @@ export async function createSubtasks(
       createdIssues.push(newIssue.number);
       core.info(`✅ Created subtask #${newIssue.number}: ${subtask.title}`);
 
-      // Add a comment to the parent issue
+      // Add a comment to the parent issue with priority and size info
+      const metaInfo = `Priority: ${subtask.priority} | Size: ${subtask.size}`;
       await ctx.octokit.rest.issues.createComment({
         owner: ctx.owner,
         repo: ctx.repo,
         issue_number: ctx.issueNumber,
-        body: `Created subtask: #${newIssue.number} - ${subtask.title}`,
+        body: `✅ Created subtask: #${newIssue.number} - ${subtask.title}\n\n${metaInfo}`,
       });
 
       // If there are blocked_by relationships, add them as comments
@@ -130,7 +131,7 @@ export async function createSubtasks(
           owner: ctx.owner,
           repo: ctx.repo,
           issue_number: newIssue.number,
-          body: `⚠️ This subtask is blocked by: ${blockedByText}\n\nPlease complete those tasks before starting this one.`,
+          body: `⚠️ **Blocked By:** ${blockedByText}\n\nThis subtask depends on the completion of the above tasks. Please complete those before starting this one.`,
         });
       }
     } catch (error) {
