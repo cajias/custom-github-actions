@@ -4,7 +4,7 @@ This repository contains reusable GitHub Actions for the Agentic Applications ec
 
 ## Repository Structure
 
-```
+```text
 custom-github-actions/
 ├── ai-triage/              # AI-powered issue triage action
 │   ├── src/                # TypeScript source code
@@ -30,6 +30,7 @@ npm run all
 ```
 
 The `npm run all` command performs:
+
 1. Format code with Prettier
 2. Lint with ESLint
 3. Compile TypeScript
@@ -48,12 +49,14 @@ npm test        # Run tests with Jest
 ## Coding Standards
 
 ### TypeScript
+
 - All actions are written in **TypeScript**
 - Use strict type checking (see `tsconfig.json`)
 - Follow existing patterns in the codebase
 - Compiled JavaScript is committed to the `dist/` directory
 
 ### Code Style
+
 - **Prettier** for formatting (auto-formats on build)
 - **ESLint** for linting with GitHub plugin
 - Use clear, descriptive variable names
@@ -62,6 +65,7 @@ npm test        # Run tests with Jest
 ### Action Structure
 
 Each GitHub Action should have:
+
 - `src/main.ts` - Entry point
 - `action.yml` - Action metadata
 - `README.md` - Documentation
@@ -72,10 +76,12 @@ Each GitHub Action should have:
 ## Dependencies
 
 ### Core Dependencies
+
 - `@actions/core` - GitHub Actions toolkit
 - `@actions/github` - GitHub API client
 
 ### Dev Dependencies
+
 - `typescript` - TypeScript compiler
 - `@vercel/ncc` - Package bundler
 - `eslint` - Linting
@@ -85,6 +91,7 @@ Each GitHub Action should have:
 ## Testing
 
 ### Local Testing
+
 Use [act](https://github.com/nektos/act) to test actions locally:
 
 ```bash
@@ -92,12 +99,15 @@ act -j <job-name>
 ```
 
 ### Test Coverage
+
 When adding new features, include tests if the action has a test suite.
 
 ## Documentation
 
 ### Action Documentation
+
 Each action's `README.md` should include:
+
 - Quick start example
 - Features list
 - Input/output specifications
@@ -106,6 +116,7 @@ Each action's `README.md` should include:
 - Development instructions
 
 ### Code Comments
+
 - Add JSDoc comments for functions and methods
 - Explain complex logic or non-obvious behavior
 - Document API integrations and external dependencies
@@ -113,6 +124,7 @@ Each action's `README.md` should include:
 ## GitHub Models Integration
 
 The AI Triage action uses GitHub Models API:
+
 - No external API keys required
 - Uses built-in `GITHUB_TOKEN`
 - Requires `models: read` permission
@@ -122,6 +134,7 @@ The AI Triage action uses GitHub Models API:
 ## Project V2 API
 
 For actions that integrate with GitHub Projects:
+
 - Use GraphQL API for project operations
 - Handle optional project configuration gracefully
 - Document project number location
@@ -130,6 +143,7 @@ For actions that integrate with GitHub Projects:
 ## Common Patterns
 
 ### Error Handling
+
 ```typescript
 try {
   // Action logic
@@ -139,12 +153,14 @@ try {
 ```
 
 ### Input Handling
+
 ```typescript
 const token = core.getInput('token', { required: true })
 const optionalInput = core.getInput('optional-input') || 'default-value'
 ```
 
 ### Output Setting
+
 ```typescript
 core.setOutput('output-name', outputValue)
 ```
@@ -152,12 +168,14 @@ core.setOutput('output-name', outputValue)
 ## Making Changes
 
 ### Before Making Changes
+
 1. Understand the action's purpose and existing behavior
 2. Review the action's README and documentation
 3. Check existing tests and test coverage
 4. Review similar actions for patterns
 
 ### Code Changes Process
+
 1. Make minimal, focused changes
 2. Update TypeScript source in `src/`
 3. Run `npm run all` to format, lint, build, and package
@@ -166,6 +184,7 @@ core.setOutput('output-name', outputValue)
 6. Commit both source and compiled `dist/` files
 
 ### Committing Compiled Code
+
 - **Always commit `dist/` directory** - GitHub Actions run from compiled code
 - Run `npm run package` before committing
 - The `dist/index.js` file must be up-to-date
@@ -173,6 +192,7 @@ core.setOutput('output-name', outputValue)
 ## Issue Triage Labels
 
 The AI Triage action uses these label patterns:
+
 - **Type:** `type:feature`, `type:bug`, `type:documentation`, etc.
 - **Scope:** `scope:api`, `scope:ui`, `scope:testing`, etc.
 - **Priority:** `priority:critical`, `priority:high`, `priority:medium`, `priority:low`
@@ -199,4 +219,6 @@ The AI Triage action uses these label patterns:
 
 ## Contributing
 
-This repository is part of the [Agentic Applications](https://github.com/users/cajias/projects/4) project. Contributions should align with the project's goals of creating AI-powered automation tools.
+This repository is part of the [Agentic Applications](https://github.com/users/cajias/projects/4)
+project. Contributions should align with the project's goals of creating AI-powered automation
+tools.
