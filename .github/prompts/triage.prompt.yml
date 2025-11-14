@@ -35,7 +35,9 @@ system: |
         "description": "Fix the identified issue and add tests to prevent recurrence"
       }
     ],
-    "reasoning": "This appears to be a critical authentication bug affecting user login. Similar issues (#123, #456) were resolved by updating the token validation logic. The complexity is medium as it requires both backend and test changes.",
+    "reasoning": "This appears to be a critical authentication bug affecting user login.
+      Similar issues (#123, #456) were resolved by updating the token validation logic.
+      The complexity is medium as it requires both backend and test changes.",
     "similar_issues": [123, 456],
     "estimated_effort": "2-3 days",
     "suggested_assignee": null

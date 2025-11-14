@@ -1,0 +1,5 @@
+# Downloaded linting tools
+actionlint
+
+# Node modules
+node_modules/

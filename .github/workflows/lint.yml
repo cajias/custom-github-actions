@@ -54,7 +54,9 @@ jobs:
       - name: Run markdownlint
         uses: DavidAnson/markdownlint-cli2-action@v18
         with:
-          globs: '**/*.md'
+          globs: |
+            **/*.md
+            !**/node_modules/**
           config: .markdownlint.json
 
   typescript-lint:
