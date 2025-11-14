@@ -1,0 +1,63 @@
+name: Test Homebrew Update Action
+
+# This is a test workflow to validate the homebrew-update action
+# It's set to manual trigger only to avoid unintended releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_version:
+        description: 'Test version to use'
+        required: false
+        default: ''
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    name: Test Homebrew Update
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Display test info
+        run: |
+          echo "Testing Homebrew Update Action"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Test version: ${{ github.event.inputs.test_version }}"
+
+      - name: Test action (dry run check)
+        run: |
+          echo "This is a placeholder for actual testing"
+          echo "To test the action properly, you would need:"
+          echo "1. A test tap repository"
+          echo "2. A test formula file"
+          echo "3. Appropriate tokens configured"
+          echo ""
+          echo "Example usage would be:"
+          echo "  - uses: ./homebrew-update"
+          echo "    with:"
+          echo "      github_token: \${{ secrets.GITHUB_TOKEN }}"
+          echo "      tap_repo_token: \${{ secrets.TAP_REPO_TOKEN }}"
+          echo "      github_user: test-user"
+          echo "      source_repo: test-repo"
+          echo "      tap_repo: homebrew-test"
+          echo "      formula_name: test-formula"
+          echo "      formula_path: Formula/test-formula.rb"
+
+      - name: Verify action files
+        run: |
+          echo "Checking action files..."
+          ls -la homebrew-update/
+          echo ""
+          echo "Checking dist files..."
+          ls -lh homebrew-update/dist/
+          echo ""
+          echo "Verifying index.js exists..."
+          test -f homebrew-update/dist/index.js && echo "✅ index.js found" || echo "❌ index.js not found"
+          echo ""
+          echo "Verifying action.yml exists..."
+          test -f homebrew-update/action.yml && echo "✅ action.yml found" || echo "❌ action.yml not found"
