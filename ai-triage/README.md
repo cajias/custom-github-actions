@@ -139,9 +139,16 @@ The action automatically handles trigger logic internally and will only run when
 ```
 
 **How to find your project number:**
+
+For user projects:
 - Go to your project: `https://github.com/users/YOUR_USERNAME/projects/`
 - Click on your project
 - The URL will be: `https://github.com/users/YOUR_USERNAME/projects/4` ← **4 is your project number**
+
+For organization projects:
+- Go to your organization projects: `https://github.com/orgs/YOUR_ORG/projects/`
+- Click on your project
+- The URL will be: `https://github.com/orgs/YOUR_ORG/projects/4` ← **4 is your project number**
 
 ## Default Triggers
 

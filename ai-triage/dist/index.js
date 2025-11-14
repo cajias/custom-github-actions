@@ -30793,13 +30793,38 @@ async function getProjectFields(ctx, projectConfig) {
           }
         }
       }
+      organization(login: $owner) {
+        projectV2(number: $number) {
+          id
+          fields(first: 20) {
+            nodes {
+              ... on ProjectV2Field {
+                id
+                name
+              }
+              ... on ProjectV2SingleSelectField {
+                id
+                name
+                options {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
     }
   `;
     const result = await ctx.octokit.graphql(query, {
         owner: projectConfig.owner,
         number: projectConfig.number,
     });
-    const project = result.user.projectV2;
+    // Try user project first, then organization project
+    const project = result.user?.projectV2 || result.organization?.projectV2;
+    if (!project) {
+        throw new Error(`Could not find ProjectV2 with number ${projectConfig.number} for owner ${projectConfig.owner}`);
+    }
     const projectId = project.id;
     const fieldNodes = project.fields.nodes;
     const statusField = fieldNodes.find((f) => f.name === "Status");
