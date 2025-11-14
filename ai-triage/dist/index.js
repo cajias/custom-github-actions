@@ -29970,14 +29970,14 @@ const model_providers_1 = __nccwpck_require__(1585);
 /**
  * Analyze issue using AI model (supports multiple providers)
  */
-async function analyzeIssue(ctx, model, anthropicKey, openaiKey, githubToken) {
+async function analyzeIssue(ctx, model, anthropicKey, openaiKey, githubToken, existingSubtasks) {
     core.info(`Analyzing issue #${ctx.issueNumber} with ${model}...`);
     const issue = ctx.context.payload.issue;
     if (!issue) {
         throw new Error("Issue not found in context");
     }
     const systemPrompt = buildSystemPrompt();
-    const userPrompt = buildUserPrompt(issue.title, issue.body || "", ctx);
+    const userPrompt = buildUserPrompt(issue.title, issue.body || "", ctx, existingSubtasks);
     // Get model configuration and validate API keys
     const config = (0, model_providers_1.getModelConfig)(model, anthropicKey, openaiKey);
     // Call the appropriate AI provider
@@ -29999,6 +29999,7 @@ Analyze issues and determine:
 2. What labels, priority, and size are appropriate
 3. Whether clarifying questions are needed
 4. If the description should be enhanced
+5. Whether the task requires subtasks and evaluate existing subtasks
 
 Return a JSON object with this EXACT structure:
 {
@@ -30010,7 +30011,27 @@ Return a JSON object with this EXACT structure:
   "suggested_assignee": null,
   "clarifying_questions": ["question1", ...],
   "enhanced_description": "improved description or null",
-  "reasoning": "brief explanation"
+  "reasoning": "brief explanation",
+  "needs_subtasks": boolean,
+  "subtasks_to_create": [
+    {
+      "title": "string",
+      "body": "detailed description with acceptance criteria",
+      "blocked_by": [issue_numbers within same parent],
+      "labels": ["type:*", ...],
+      "priority": "P0" | "P1" | "P2",
+      "size": "XS" | "S" | "M" | "L" | "XL"
+    }
+  ],
+  "subtask_feedback": [
+    {
+      "issue_number": number,
+      "feedback": "detailed feedback on this subtask",
+      "is_ready": boolean,
+      "suggested_improvements": ["improvement1", ...]
+    }
+  ],
+  "overall_subtask_feedback": "assessment of all subtasks together or null"
 }
 
 Labeling guidelines:
@@ -30042,21 +30063,39 @@ Size guidelines:
 - L: 3-5 days (large features, architectural changes)
 - XL: 1+ weeks (major features, significant refactoring)
 
+SUBTASK GUIDELINES:
+- Create subtasks ONLY for complex tasks (M, L, XL size)
+- Simple tasks (XS, S) should NOT have subtasks
+- Parent task should be generic and describe acceptance criteria
+- Subtasks should be specific with proper detail level
+- Each subtask should answer all questions needed for successful completion
+- Subtasks should link to other subtasks they're blocked by (blocked_by field)
+- When subtasks exist, evaluate them individually and as a whole
+- Check if subtasks correctly track requirements and acceptance criteria of parent
+- Ensure subtasks provide proper ordering via blocked_by relationships
+
 Return ONLY valid JSON, no markdown formatting.`;
 }
 /**
  * Build the user prompt with issue details
  */
-function buildUserPrompt(title, body, ctx) {
-    return `**Issue Title:** ${title}
+function buildUserPrompt(title, body, ctx, existingSubtasks) {
+    let prompt = `**Issue Title:** ${title}
 
 **Issue Body:**
 ${body}
 
 **Repository:** ${ctx.owner}/${ctx.repo}
-**Issue Number:** ${ctx.issueNumber}
-
-Analyze this issue and provide triage information in JSON format.`;
+**Issue Number:** ${ctx.issueNumber}`;
+    // Include existing subtasks if present
+    if (existingSubtasks && existingSubtasks.length > 0) {
+        prompt += `\n\n**Existing Subtasks:**`;
+        for (const subtask of existingSubtasks) {
+            prompt += `\n\n#${subtask.number} - ${subtask.title} [${subtask.state}]\n${subtask.body}`;
+        }
+    }
+    prompt += `\n\nAnalyze this issue and provide triage information in JSON format. Consider whether this task needs subtasks or if existing subtasks need feedback.`;
+    return prompt;
 }
 /**
  * Parse AI response and validate structure
@@ -30091,6 +30130,9 @@ function validateAnalysis(analysis) {
         "related_issues",
         "clarifying_questions",
         "reasoning",
+        "needs_subtasks",
+        "subtasks_to_create",
+        "subtask_feedback",
     ];
     for (const field of requiredFields) {
         if (!(field in analysis)) {
@@ -30118,6 +30160,35 @@ function validateAnalysis(analysis) {
     }
     if (typeof analysis.reasoning !== "string") {
         throw new Error("reasoning must be a string");
+    }
+    if (typeof analysis.needs_subtasks !== "boolean") {
+        throw new Error("needs_subtasks must be a boolean");
+    }
+    if (!Array.isArray(analysis.subtasks_to_create)) {
+        throw new Error("subtasks_to_create must be an array");
+    }
+    if (!Array.isArray(analysis.subtask_feedback)) {
+        throw new Error("subtask_feedback must be an array");
+    }
+    // Validate subtask structure
+    for (const subtask of analysis.subtasks_to_create) {
+        if (!subtask.title ||
+            !subtask.body ||
+            !Array.isArray(subtask.blocked_by) ||
+            !Array.isArray(subtask.labels) ||
+            !subtask.priority ||
+            !subtask.size) {
+            throw new Error("Each subtask must have title, body, blocked_by, labels, priority, and size");
+        }
+    }
+    // Validate subtask feedback structure
+    for (const feedback of analysis.subtask_feedback) {
+        if (typeof feedback.issue_number !== "number" ||
+            typeof feedback.feedback !== "string" ||
+            typeof feedback.is_ready !== "boolean" ||
+            !Array.isArray(feedback.suggested_improvements)) {
+            throw new Error("Each subtask feedback must have issue_number, feedback, is_ready, and suggested_improvements");
+        }
     }
 }
 
@@ -30178,6 +30249,7 @@ const github = __importStar(__nccwpck_require__(3228));
 const analyze_1 = __nccwpck_require__(2475);
 const process_triage_1 = __nccwpck_require__(7983);
 const update_project_1 = __nccwpck_require__(3418);
+const subtasks_1 = __nccwpck_require__(1803);
 /**
  * Check if the action should run based on default triggers
  */
@@ -30241,8 +30313,13 @@ async function run() {
             owner,
             repo,
         };
+        // Fetch existing subtasks
+        const existingSubtasks = await (0, subtasks_1.fetchExistingSubtasks)(ctx);
+        if (existingSubtasks.length > 0) {
+            core.info(`Found ${existingSubtasks.length} existing subtasks`);
+        }
         // Analyze issue with AI
-        const analysis = await (0, analyze_1.analyzeIssue)(ctx, model, anthropicKey, openaiKey, token);
+        const analysis = await (0, analyze_1.analyzeIssue)(ctx, model, anthropicKey, openaiKey, token, existingSubtasks);
         core.info("AI analysis complete");
         core.debug(`Analysis: ${JSON.stringify(analysis, null, 2)}`);
         // Process triage (update issue, add labels, post comments)
@@ -30575,6 +30652,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.processTriageAnalysis = processTriageAnalysis;
 const core = __importStar(__nccwpck_require__(7484));
+const subtasks_1 = __nccwpck_require__(1803);
 /**
  * Process the AI triage analysis and update the issue accordingly
  */
@@ -30583,16 +30661,19 @@ async function processTriageAnalysis(ctx, analysis) {
     core.info(`Agent ready: ${analysis.is_agent_ready}`);
     core.info(`Priority: ${analysis.priority}`);
     core.info(`Size: ${analysis.size}`);
+    core.info(`Needs subtasks: ${analysis.needs_subtasks}`);
     // 1. Apply labels
     await applyLabels(ctx, analysis);
-    // 2. Handle agent readiness
+    // 2. Handle subtasks
+    await handleSubtasks(ctx, analysis);
+    // 3. Handle agent readiness
     if (!analysis.is_agent_ready) {
         await handleNotAgentReady(ctx, analysis);
     }
     else {
         await handleAgentReady(ctx, analysis);
     }
-    // 3. Remove needs-triage label if present
+    // 4. Remove needs-triage label if present
     await removeTriageLabel(ctx);
     core.info("✅ Triage processing complete");
 }
@@ -30685,6 +30766,23 @@ async function handleAgentReady(ctx, analysis) {
     core.info("Marked issue as agent-ready");
 }
 /**
+ * Handle subtask creation and feedback
+ */
+async function handleSubtasks(ctx, analysis) {
+    // Create new subtasks if needed
+    if (analysis.needs_subtasks && analysis.subtasks_to_create.length > 0) {
+        core.info(`Creating ${analysis.subtasks_to_create.length} new subtasks...`);
+        const createdIssues = await (0, subtasks_1.createSubtasks)(ctx, analysis.subtasks_to_create);
+        core.info(`✅ Created ${createdIssues.length} subtasks`);
+    }
+    // Post feedback on existing subtasks
+    if (analysis.subtask_feedback.length > 0 ||
+        analysis.overall_subtask_feedback) {
+        await (0, subtasks_1.postSubtaskFeedback)(ctx, analysis.subtask_feedback, analysis.overall_subtask_feedback);
+        core.info("✅ Posted subtask feedback");
+    }
+}
+/**
  * Remove the needs-triage label
  */
 async function removeTriageLabel(ctx) {
@@ -30700,6 +30798,225 @@ async function removeTriageLabel(ctx) {
     catch (error) {
         // Label might not exist, ignore
         core.debug("needs-triage label not present or already removed");
+    }
+}
+
+
+/***/ }),
+
+/***/ 1803:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Handle subtask operations - fetching existing subtasks and creating new ones
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.fetchExistingSubtasks = fetchExistingSubtasks;
+exports.createSubtasks = createSubtasks;
+exports.postSubtaskFeedback = postSubtaskFeedback;
+const core = __importStar(__nccwpck_require__(7484));
+/**
+ * Fetch existing subtasks for an issue
+ * Subtasks are identified by issues that reference the parent issue
+ */
+async function fetchExistingSubtasks(ctx) {
+    core.info(`Fetching existing subtasks for issue #${ctx.issueNumber}...`);
+    try {
+        // Use GitHub's timeline API to find references
+        const timeline = await ctx.octokit.rest.issues.listEventsForTimeline({
+            owner: ctx.owner,
+            repo: ctx.repo,
+            issue_number: ctx.issueNumber,
+            per_page: 100,
+        });
+        const subtaskNumbers = new Set();
+        // Look for cross-references in timeline events
+        for (const event of timeline.data) {
+            const eventAny = event;
+            if (event.event === "cross-referenced" && eventAny.source) {
+                const source = eventAny.source;
+                if (source.issue) {
+                    subtaskNumbers.add(source.issue.number);
+                }
+            }
+        }
+        // Also search for issues that mention this issue in their body
+        const searchQuery = `repo:${ctx.owner}/${ctx.repo} is:issue #${ctx.issueNumber} in:body`;
+        const searchResults = await ctx.octokit.rest.search.issuesAndPullRequests({
+            q: searchQuery,
+            per_page: 100,
+        });
+        for (const issue of searchResults.data.items) {
+            if (issue.number !== ctx.issueNumber && !issue.pull_request) {
+                subtaskNumbers.add(issue.number);
+            }
+        }
+        // Fetch full details for each subtask
+        const subtasks = [];
+        for (const number of subtaskNumbers) {
+            try {
+                const { data: issue } = await ctx.octokit.rest.issues.get({
+                    owner: ctx.owner,
+                    repo: ctx.repo,
+                    issue_number: number,
+                });
+                // Only include if the issue body actually references the parent
+                if (issue.body &&
+                    (issue.body.includes(`#${ctx.issueNumber}`) ||
+                        issue.body.includes(`${ctx.owner}/${ctx.repo}#${ctx.issueNumber}`))) {
+                    subtasks.push({
+                        number: issue.number,
+                        title: issue.title,
+                        body: issue.body || "",
+                        state: issue.state,
+                    });
+                }
+            }
+            catch (error) {
+                core.warning(`Failed to fetch issue #${number}: ${error}`);
+            }
+        }
+        core.info(`Found ${subtasks.length} existing subtasks`);
+        return subtasks;
+    }
+    catch (error) {
+        core.warning(`Error fetching subtasks: ${error}`);
+        return [];
+    }
+}
+/**
+ * Create new subtasks for an issue
+ */
+async function createSubtasks(ctx, subtasks) {
+    core.info(`Creating ${subtasks.length} subtasks...`);
+    const createdIssues = [];
+    for (const subtask of subtasks) {
+        try {
+            // Add reference to parent issue in the body
+            const bodyWithParent = `${subtask.body}\n\n---\n\nParent task: #${ctx.issueNumber}`;
+            // Create the issue
+            const { data: newIssue } = await ctx.octokit.rest.issues.create({
+                owner: ctx.owner,
+                repo: ctx.repo,
+                title: subtask.title,
+                body: bodyWithParent,
+                labels: subtask.labels,
+            });
+            createdIssues.push(newIssue.number);
+            core.info(`✅ Created subtask #${newIssue.number}: ${subtask.title}`);
+            // Add a comment to the parent issue
+            await ctx.octokit.rest.issues.createComment({
+                owner: ctx.owner,
+                repo: ctx.repo,
+                issue_number: ctx.issueNumber,
+                body: `Created subtask: #${newIssue.number} - ${subtask.title}`,
+            });
+            // If there are blocked_by relationships, add them as comments
+            if (subtask.blocked_by.length > 0) {
+                const blockedByText = subtask.blocked_by.map((n) => `#${n}`).join(", ");
+                await ctx.octokit.rest.issues.createComment({
+                    owner: ctx.owner,
+                    repo: ctx.repo,
+                    issue_number: newIssue.number,
+                    body: `⚠️ This subtask is blocked by: ${blockedByText}\n\nPlease complete those tasks before starting this one.`,
+                });
+            }
+        }
+        catch (error) {
+            core.error(`Failed to create subtask "${subtask.title}": ${error}`);
+        }
+    }
+    return createdIssues;
+}
+/**
+ * Post feedback on existing subtasks
+ */
+async function postSubtaskFeedback(ctx, feedback, overallFeedback) {
+    core.info(`Posting feedback on ${feedback.length} subtasks...`);
+    // Post individual feedback on each subtask
+    for (const item of feedback) {
+        try {
+            const statusEmoji = item.is_ready ? "✅" : "⚠️";
+            const readyText = item.is_ready
+                ? "This subtask is well-defined and ready."
+                : "This subtask needs improvements before it's ready.";
+            let body = `${statusEmoji} **AI Triage Feedback on Subtask**\n\n${readyText}\n\n${item.feedback}`;
+            if (item.suggested_improvements.length > 0) {
+                const improvements = item.suggested_improvements
+                    .map((imp, i) => `${i + 1}. ${imp}`)
+                    .join("\n");
+                body += `\n\n**Suggested Improvements:**\n${improvements}`;
+            }
+            await ctx.octokit.rest.issues.createComment({
+                owner: ctx.owner,
+                repo: ctx.repo,
+                issue_number: item.issue_number,
+                body,
+            });
+            core.info(`✅ Posted feedback on subtask #${item.issue_number}`);
+        }
+        catch (error) {
+            core.error(`Failed to post feedback on subtask #${item.issue_number}: ${error}`);
+        }
+    }
+    // Post overall feedback on the parent issue
+    if (overallFeedback && feedback.length > 0) {
+        try {
+            const subtaskList = feedback
+                .map((f) => {
+                const statusEmoji = f.is_ready ? "✅" : "⚠️";
+                return `- ${statusEmoji} #${f.issue_number}`;
+            })
+                .join("\n");
+            const body = `🔍 **AI Triage: Subtask Analysis**\n\n` +
+                `**Subtasks:**\n${subtaskList}\n\n` +
+                `**Overall Assessment:**\n${overallFeedback}`;
+            await ctx.octokit.rest.issues.createComment({
+                owner: ctx.owner,
+                repo: ctx.repo,
+                issue_number: ctx.issueNumber,
+                body,
+            });
+            core.info("✅ Posted overall subtask feedback on parent issue");
+        }
+        catch (error) {
+            core.error(`Failed to post overall feedback: ${error}`);
+        }
     }
 }
 
