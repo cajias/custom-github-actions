@@ -1,0 +1,273 @@
+name: 'AI Triage POC - MCP + GitHub Script'
+
+on:
+  issues:
+    types: [opened, edited]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to triage'
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  issues: write
+  models: read
+
+jobs:
+  ai-triage-poc:
+    name: Triage Issue with AI + MCP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Issue Details
+        id: issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_number = context.payload.issue?.number || ${{ github.event.inputs.issue_number }};
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number
+            });
+
+            core.setOutput('number', issue.number);
+            core.setOutput('title', issue.title);
+            core.setOutput('body', issue.body || '');
+            core.setOutput('author', issue.user.login);
+
+            return issue;
+
+      - name: AI Analysis with MCP
+        id: ai_analysis
+        uses: actions/ai-inference@v1.2
+        with:
+          model: openai/gpt-4o
+          max-tokens: 2000
+          enable-github-mcp: true
+          github-mcp-token: ${{ secrets.TRIAGE_PAT }}
+          system-prompt: |
+            You are an expert issue triager with access to GitHub tools.
+
+            Your task is to analyze issues and provide structured triage data.
+            You can use GitHub MCP tools to:
+            - Search for similar issues
+            - Review related code
+            - Check project history
+
+            IMPORTANT: You must respond with ONLY valid JSON in this exact format:
+            {
+              "labels": ["type:bug", "priority:high"],
+              "complexity": "medium",
+              "priority": "high",
+              "category": "bug",
+              "needs_subtasks": true,
+              "subtasks": [
+                {"title": "Investigate root cause", "description": "..."},
+                {"title": "Implement fix", "description": "..."}
+              ],
+              "reasoning": "Brief explanation of your analysis",
+              "similar_issues": [123, 456]
+            }
+
+            Rules:
+            - complexity: "low", "medium", or "high"
+            - priority: "low", "medium", "high", or "critical"
+            - category: "bug", "feature", "documentation", "question", or "enhancement"
+            - labels: use existing repo label conventions
+            - subtasks: max 5, only if needs_subtasks is true
+            - similar_issues: issue numbers found via MCP search (empty array if none)
+          prompt: |
+            Analyze this issue and provide triage data:
+
+            Issue #${{ steps.issue.outputs.number }}
+            Title: ${{ steps.issue.outputs.title }}
+            Author: @${{ steps.issue.outputs.author }}
+
+            Body:
+            ${{ steps.issue.outputs.body }}
+
+            Use GitHub MCP tools to search for similar issues and relevant code.
+            Respond with ONLY the JSON structure specified in your instructions.
+
+      - name: Validate AI Response
+        id: validate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const response = `${{ steps.ai_analysis.outputs.response }}`;
+
+            core.info('Raw AI response:');
+            core.info(response);
+
+            try {
+              // Extract JSON from response (in case there's extra text)
+              const jsonMatch = response.match(/\{[\s\S]*\}/);
+              if (!jsonMatch) {
+                throw new Error('No JSON object found in response');
+              }
+
+              const analysis = JSON.parse(jsonMatch[0]);
+
+              // Validate required fields
+              const required = ['labels', 'complexity', 'priority', 'category', 'reasoning'];
+              for (const field of required) {
+                if (!(field in analysis)) {
+                  throw new Error(`Missing required field: ${field}`);
+                }
+              }
+
+              // Validate enums
+              const validComplexity = ['low', 'medium', 'high'];
+              const validPriority = ['low', 'medium', 'high', 'critical'];
+              const validCategory = ['bug', 'feature', 'documentation', 'question', 'enhancement'];
+
+              if (!validComplexity.includes(analysis.complexity)) {
+                throw new Error(`Invalid complexity: ${analysis.complexity}`);
+              }
+              if (!validPriority.includes(analysis.priority)) {
+                throw new Error(`Invalid priority: ${analysis.priority}`);
+              }
+              if (!validCategory.includes(analysis.category)) {
+                throw new Error(`Invalid category: ${analysis.category}`);
+              }
+
+              core.info('Validation passed');
+              core.setOutput('valid', 'true');
+              core.setOutput('analysis', JSON.stringify(analysis));
+
+              return analysis;
+            } catch (error) {
+              core.error(`Validation failed: ${error.message}`);
+              core.setOutput('valid', 'false');
+              core.setOutput('error', error.message);
+              throw error;
+            }
+
+      - name: Apply Labels
+        if: steps.validate.outputs.valid == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const analysis = JSON.parse(`${{ steps.validate.outputs.analysis }}`);
+            const issue_number = ${{ steps.issue.outputs.number }};
+
+            // Get current labels
+            const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number
+            });
+
+            const currentLabelNames = currentLabels.map(l => l.name);
+            const newLabels = analysis.labels || [];
+
+            core.info(`Current labels: ${currentLabelNames.join(', ')}`);
+            core.info(`AI suggested labels: ${newLabels.join(', ')}`);
+
+            // Add AI-suggested labels
+            if (newLabels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                labels: newLabels
+              });
+
+              core.info(`Added labels: ${newLabels.join(', ')}`);
+            }
+
+      - name: Create Subtasks
+        id: create-subtasks
+        if: steps.validate.outputs.valid == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const analysis = JSON.parse(`${{ steps.validate.outputs.analysis }}`);
+            const issue_number = ${{ steps.issue.outputs.number }};
+
+            if (!analysis.needs_subtasks || !analysis.subtasks || analysis.subtasks.length === 0) {
+              core.info('No subtasks needed');
+              return;
+            }
+
+            core.info(`Creating ${analysis.subtasks.length} subtasks...`);
+
+            const subtaskNumbers = [];
+
+            for (const subtask of analysis.subtasks) {
+              const { data: newIssue } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: subtask.title,
+                body: `${subtask.description}\n\n---\n**Parent Issue:** #${issue_number}` +
+                      `\n**Auto-generated by AI Triage**`,
+                labels: ['subtask', `parent:${issue_number}`]
+              });
+
+              subtaskNumbers.push(newIssue.number);
+              core.info(`Created subtask #${newIssue.number}: ${subtask.title}`);
+            }
+
+            core.setOutput('subtask_numbers', subtaskNumbers.join(','));
+            return subtaskNumbers;
+
+      - name: Add Triage Comment
+        if: steps.validate.outputs.valid == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const analysis = JSON.parse(`${{ steps.validate.outputs.analysis }}`);
+            const issue_number = ${{ steps.issue.outputs.number }};
+            const subtasks = '${{ steps.create-subtasks.outputs.subtask_numbers }}';
+
+            let comment = `## AI Triage Analysis\n\n`;
+            comment += `**Category:** ${analysis.category}\n`;
+            comment += `**Priority:** ${analysis.priority}\n`;
+            comment += `**Complexity:** ${analysis.complexity}\n\n`;
+            comment += `**Reasoning:**\n${analysis.reasoning}\n\n`;
+
+            if (analysis.similar_issues && analysis.similar_issues.length > 0) {
+              comment += `**Similar Issues:** ${analysis.similar_issues.map(n => `#${n}`).join(', ')}\n\n`;
+            }
+
+            if (subtasks) {
+              const subtaskList = subtasks.split(',').map(n => `- [ ] #${n}`).join('\n');
+              comment += `**Subtasks:**\n${subtaskList}\n\n`;
+            }
+
+            comment += `---\n*Generated with ` +
+                       `[actions/ai-inference](https://github.com/actions/ai-inference) + GitHub MCP*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body: comment
+            });
+
+            core.info('Posted triage comment');
+
+      - name: Handle Failure
+        if: failure() && steps.validate.outputs.valid == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_number = ${{ steps.issue.outputs.number }};
+            const error = `${{ steps.validate.outputs.error }}`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body: `## AI Triage Failed\n\nThe AI analysis encountered an error and ` +
+                    `could not complete triage.\n\n**Error:** ${error}\n\n` +
+                    `Please triage this issue manually.`
+            });
+
+            core.warning('AI triage failed - posted error comment');

@@ -4,7 +4,7 @@ This guide explains how to set up GitHub Project automation to work seamlessly w
 
 ## The Flow
 
-```
+```text
 Issue Created → AI Triage → Labels + Priority + Size → Project Board
                     ↓
               Agent Ready?
@@ -38,10 +38,12 @@ To automatically re-triage issues when moved to Backlog status, set up a GitHub 
 **Workflow Name:** `Auto-triage on backlog`
 
 **When:** `Status changes`
+
 - **From:** `Any status`
 - **To:** `Backlog`
 
 **Then:** `Add label`
+
 - **Label:** `needs-triage`
 
 This automatically adds the `needs-triage` label when you move an issue to Backlog, triggering AI re-triage.
@@ -111,6 +113,7 @@ jobs:
 The action automatically handles trigger logic internally! No `if` conditions needed.
 
 **Finding your project number:**
+
 1. Go to: `https://github.com/users/YOUR_USERNAME/projects/`
 2. Click your project
 3. Check the URL: `https://github.com/users/YOUR_USERNAME/projects/4` ← **4 is the number**
@@ -220,6 +223,7 @@ if: |
 **Cause:** Project automation not configured
 
 **Solution:**
+
 1. Go to your project → Workflows
 2. Create "Auto-triage on backlog" workflow (see Setup Instructions above)
 3. Test by moving an issue to Backlog
@@ -227,11 +231,13 @@ if: |
 ### Status stays in Backlog even when ready
 
 **Possible causes:**
+
 - Workflow error (check Actions logs)
 - Incorrect project owner or number in workflow
 - Project fields missing or have different names
 
 **Solution:**
+
 1. Check workflow logs: `https://github.com/YOUR_ORG/YOUR_REPO/actions`
 2. Verify `project-owner` and `project-number` match your project
 3. Ensure project has "Status" field with "Ready" and "Backlog" options
@@ -240,13 +246,15 @@ if: |
 
 **Cause:** AI doesn't have memory of previous runs
 
-**Solution:** Update the issue **description** with answers, not just comments. The AI only sees the issue title and body, not comment history.
+**Solution:** Update the issue **description** with answers, not just comments. The AI only
+sees the issue title and body, not comment history.
 
 ### Permission denied errors
 
 **Cause:** Missing required permissions
 
 **Solution:** Ensure workflow has these permissions:
+
 ```yaml
 permissions:
   contents: read
@@ -265,6 +273,7 @@ permissions:
 ## Next Steps
 
 After setup:
+
 1. ✅ Test with 2-3 sample issues
 2. ✅ Monitor AI accuracy
 3. ✅ Adjust project fields if needed

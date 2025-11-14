@@ -1,0 +1,53 @@
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^ai-triage/dist/
+      - id: end-of-file-fixer
+        exclude: ^ai-triage/dist/
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [-c=.yamllint]
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.43.0
+    hooks:
+      - id: markdownlint
+        args: [--config=.markdownlint.json]
+
+  # actionlint for GitHub Actions workflows
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.4
+    hooks:
+      - id: actionlint
+
+  # TypeScript/JavaScript linting (ai-triage action)
+  - repo: local
+    hooks:
+      - id: eslint-ai-triage
+        name: ESLint (ai-triage)
+        entry: bash -c 'cd ai-triage && npm run lint'
+        language: system
+        files: ^ai-triage/src/.*\.ts$
+        pass_filenames: false
+
+      - id: prettier-ai-triage
+        name: Prettier (ai-triage)
+        entry: bash -c 'cd ai-triage && npx prettier --write'
+        language: system
+        files: ^ai-triage/src/.*\.ts$
+        pass_filenames: true
