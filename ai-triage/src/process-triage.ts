@@ -4,6 +4,7 @@
 
 import * as core from "@actions/core";
 import { ActionContext, TriageAnalysis } from "./types";
+import { createSubtasks, postSubtaskFeedback } from "./subtasks";
 
 /**
  * Process the AI triage analysis and update the issue accordingly
@@ -16,18 +17,22 @@ export async function processTriageAnalysis(
   core.info(`Agent ready: ${analysis.is_agent_ready}`);
   core.info(`Priority: ${analysis.priority}`);
   core.info(`Size: ${analysis.size}`);
+  core.info(`Needs subtasks: ${analysis.needs_subtasks}`);
 
   // 1. Apply labels
   await applyLabels(ctx, analysis);
 
-  // 2. Handle agent readiness
+  // 2. Handle subtasks
+  await handleSubtasks(ctx, analysis);
+
+  // 3. Handle agent readiness
   if (!analysis.is_agent_ready) {
     await handleNotAgentReady(ctx, analysis);
   } else {
     await handleAgentReady(ctx, analysis);
   }
 
-  // 3. Remove needs-triage label if present
+  // 4. Remove needs-triage label if present
   await removeTriageLabel(ctx);
 
   core.info("✅ Triage processing complete");
@@ -152,6 +157,37 @@ async function handleAgentReady(
   });
 
   core.info("Marked issue as agent-ready");
+}
+
+/**
+ * Handle subtask creation and feedback
+ */
+async function handleSubtasks(
+  ctx: ActionContext,
+  analysis: TriageAnalysis,
+): Promise<void> {
+  // Create new subtasks if needed
+  if (analysis.needs_subtasks && analysis.subtasks_to_create.length > 0) {
+    core.info(`Creating ${analysis.subtasks_to_create.length} new subtasks...`);
+    const createdIssues = await createSubtasks(
+      ctx,
+      analysis.subtasks_to_create,
+    );
+    core.info(`✅ Created ${createdIssues.length} subtasks`);
+  }
+
+  // Post feedback on existing subtasks
+  if (
+    analysis.subtask_feedback.length > 0 ||
+    analysis.overall_subtask_feedback
+  ) {
+    await postSubtaskFeedback(
+      ctx,
+      analysis.subtask_feedback,
+      analysis.overall_subtask_feedback,
+    );
+    core.info("✅ Posted subtask feedback");
+  }
 }
 
 /**
