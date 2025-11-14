@@ -9,6 +9,7 @@ Reusable GitHub Actions for the Agentic Applications ecosystem.
 AI-powered GitHub issue triage with multi-provider support (GitHub Models, Anthropic, OpenAI).
 
 **Features:**
+
 - Automatically labels issues with type, scope, and priority
 - Estimates issue size (XS, S, M, L, XL)
 - Enhances issue descriptions to be agent-ready
@@ -17,6 +18,7 @@ AI-powered GitHub issue triage with multi-provider support (GitHub Models, Anthr
 - Supports multiple AI providers (GitHub Models, Claude, GPT)
 
 **Minimal Usage (Free):**
+
 ```yaml
 - uses: cajias/custom-github-actions/ai-triage@main
   with:
@@ -25,6 +27,7 @@ AI-powered GitHub issue triage with multi-provider support (GitHub Models, Anthr
 ```
 
 **With Claude (Anthropic):**
+
 ```yaml
 - uses: cajias/custom-github-actions/ai-triage@main
   with:
@@ -34,6 +37,7 @@ AI-powered GitHub issue triage with multi-provider support (GitHub Models, Anthr
 ```
 
 **With GPT (OpenAI):**
+
 ```yaml
 - uses: cajias/custom-github-actions/ai-triage@main
   with:
@@ -43,6 +47,7 @@ AI-powered GitHub issue triage with multi-provider support (GitHub Models, Anthr
 ```
 
 **With Project Board Integration (Optional):**
+
 ```yaml
 - uses: cajias/custom-github-actions/ai-triage@main
   with:
@@ -52,6 +57,7 @@ AI-powered GitHub issue triage with multi-provider support (GitHub Models, Anthr
 ```
 
 **Documentation:**
+
 - [Action README](./ai-triage/README.md)
 - [Project Automation Setup](./docs/PROJECT_AUTOMATION.md)
 
@@ -60,11 +66,13 @@ AI-powered GitHub issue triage with multi-provider support (GitHub Models, Anthr
 ## 🧪 Experimental: AI Triage POC (MCP + GitHub Script)
 
 Next-generation AI triage using:
+
 - **GitHub Models API** (GPT-4o) - Free tier available
 - **Model Context Protocol (MCP)** - Automatic tool use with ReAct loops
 - **GitHub Script** - Deterministic write operations
 
 **Key Improvements over v1:**
+
 - ✅ No custom AI code (500 lines → ~200 lines YAML)
 - ✅ Automatic tool use loop (searches similar issues, analyzes code)
 - ✅ Better separation: AI for analysis, Script for operations
@@ -73,6 +81,7 @@ Next-generation AI triage using:
 **Status:** POC validation phase - testing alongside v1
 
 **Documentation:**
+
 - [POC Documentation](./docs/ai-triage-mcp-poc.md)
 - [Architecture Validation](./docs/ai-triage-mcp-poc.md#validated-assumptions)
 
@@ -87,6 +96,7 @@ Next-generation AI triage using:
 ## Development
 
 Each action is self-contained in its own directory with:
+
 - TypeScript source code
 - Compiled JavaScript (committed to repo)
 - Action metadata (`action.yml`)
@@ -101,6 +111,7 @@ npm run all
 ```
 
 This will:
+
 1. Format code with Prettier
 2. Lint with ESLint
 3. Compile TypeScript
@@ -119,6 +130,7 @@ act -j triage
 This project uses multiple linters to maintain code quality:
 
 **Quick Start:**
+
 ```bash
 # Install all linting tools
 make install-lint-tools
@@ -134,6 +146,7 @@ make pre-commit-install
 ```
 
 **Available Linters:**
+
 - **yamllint** - YAML files (workflows, prompts)
 - **actionlint** - GitHub Actions workflows
 - **markdownlint** - Documentation

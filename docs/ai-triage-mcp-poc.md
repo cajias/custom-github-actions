@@ -1,13 +1,14 @@
 # AI Triage POC - MCP + GitHub Script
 
 This POC demonstrates a hybrid architecture for AI-powered issue triage using:
+
 - **GitHub Models API** (GPT-4o) for AI inference
 - **Model Context Protocol (MCP)** for read-only GitHub tools access
 - **GitHub Script** for write operations (labels, comments, subtasks)
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    GitHub Actions Workflow                   │
 ├─────────────────────────────────────────────────────────────┤
@@ -75,10 +76,12 @@ This POC demonstrates a hybrid architecture for AI-powered issue triage using:
 ### 1. Create Personal Access Token (PAT)
 
 GitHub MCP requires a PAT with these permissions:
+
 - `repo` - Full repository access
 - `read:org` - Read organization data
 
 **Steps:**
+
 1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
 2. Generate new token with `repo` and `read:org` scopes
 3. Copy the token
@@ -94,28 +97,33 @@ GitHub MCP requires a PAT with these permissions:
 ### 3. Deploy Workflow
 
 The POC workflow is in:
-```
+
+```text
 .github/workflows/ai-triage-mcp-poc.yml
 ```
 
 It will automatically run on:
+
 - Issue opened
 - Issue edited
 - Manual trigger (workflow_dispatch)
 
 ### 4. Test the POC
 
-**Option 1: Create a test issue**
+#### Option 1: Create a test issue
+
 ```bash
 gh issue create --title "Test Issue for AI Triage" --body "This is a test issue to validate the AI triage POC workflow"
 ```
 
-**Option 2: Manually trigger workflow**
+#### Option 2: Manually trigger workflow
+
 ```bash
 gh workflow run ai-triage-mcp-poc.yml --field issue_number=123
 ```
 
-**Option 3: Use GitHub UI**
+#### Option 3: Use GitHub UI
+
 1. Go to Actions tab
 2. Select "AI Triage POC - MCP + GitHub Script"
 3. Click "Run workflow"
@@ -125,11 +133,13 @@ gh workflow run ai-triage-mcp-poc.yml --field issue_number=123
 ## Prompt File (Optional)
 
 For better prompt management, use the structured prompt file:
-```
+
+```text
 .github/prompts/triage.prompt.yml
 ```
 
 To use it, update the workflow step:
+
 ```yaml
 - name: AI Analysis with MCP
   uses: actions/ai-inference@v1.2
@@ -160,6 +170,7 @@ When an issue is triaged, you'll see:
    - Checklist of subtasks
 
 **Example comment:**
+
 ```markdown
 ## AI Triage Analysis
 
@@ -190,7 +201,8 @@ logic. The complexity is medium as it requires both backend and test changes.
 2. Select failed workflow run
 3. Expand "AI Analysis with MCP" step
 4. Look for MCP connection logs:
-   ```
+
+   ```text
    Connecting to GitHub MCP server...
    Successfully connected to GitHub MCP server
    Retrieved 15 tools from GitHub MCP server
@@ -199,18 +211,22 @@ logic. The complexity is medium as it requires both backend and test changes.
 ### Common Issues
 
 **Issue:** "Failed to connect to GitHub MCP server"
+
 - **Cause:** Invalid or missing PAT
 - **Fix:** Check `TRIAGE_PAT` secret has correct permissions
 
 **Issue:** "Validation failed: No JSON object found in response"
+
 - **Cause:** AI didn't return valid JSON
 - **Fix:** Update system prompt to emphasize JSON-only output
 
 **Issue:** "Resource not accessible by integration"
+
 - **Cause:** Missing workflow permissions
 - **Fix:** Add required permissions to workflow YAML
 
 **Issue:** "Rate limit exceeded"
+
 - **Cause:** Too many AI inference calls
 - **Fix:** GitHub Models has rate limits (check quotas)
 
@@ -251,10 +267,12 @@ To migrate your existing `ai-triage` action to this architecture:
 ## Cost Analysis
 
 **GitHub Models (Free Tier):**
+
 - GPT-4o: 10 requests/min, 50 requests/day
 - 8000 tokens in, 4000 tokens out per request
 
 **Typical Triage:**
+
 - ~1000 tokens input (issue + context)
 - ~500 tokens output (JSON response)
 - ~2-3 MCP tool calls per issue
@@ -263,6 +281,7 @@ To migrate your existing `ai-triage` action to this architecture:
 **Capacity:** ~15 issues/day on free tier
 
 For higher volume, consider:
+
 - GitHub Copilot Pro+ (higher limits)
 - Direct OpenAI API integration
 - Batch processing during off-peak hours
@@ -292,11 +311,13 @@ For higher volume, consider:
 ## Support
 
 For issues with this POC:
+
 1. Check workflow logs in Actions tab
 2. Review [debugging section](#debugging) above
 3. Open an issue in this repository
 
 For issues with underlying tools:
-- **actions/ai-inference**: https://github.com/actions/ai-inference/issues
-- **GitHub Models**: https://docs.github.com/en/github-models
-- **GitHub MCP**: https://github.com/github/github-mcp-server/issues
+
+- **actions/ai-inference**: <https://github.com/actions/ai-inference/issues>
+- **GitHub Models**: <https://docs.github.com/en/github-models>
+- **GitHub MCP**: <https://github.com/github/github-mcp-server/issues>

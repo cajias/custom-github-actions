@@ -5,7 +5,9 @@ This project uses multiple linting tools to maintain code quality and consistenc
 ## Available Linters
 
 ### 1. **yamllint** - YAML Files
+
 Lints all YAML files including:
+
 - GitHub Actions workflows (`.github/workflows/*.yml`)
 - Prompt files (`.github/prompts/*.yml`)
 - Configuration files
@@ -13,12 +15,15 @@ Lints all YAML files including:
 **Configuration:** `.yamllint`
 
 **Key Rules:**
+
 - 2-space indentation
 - Max line length: 120 characters
 - Consistent formatting
 
 ### 2. **actionlint** - GitHub Actions Workflows
+
 Specialized linter for GitHub Actions workflows that checks for:
+
 - Invalid action references
 - Missing required inputs
 - Deprecated syntax
@@ -28,23 +33,28 @@ Specialized linter for GitHub Actions workflows that checks for:
 **No configuration needed** - uses GitHub's official schema
 
 ### 3. **markdownlint** - Markdown Documentation
+
 Lints all `.md` files for consistency and best practices.
 
 **Configuration:** `.markdownlint.json`
 
 **Key Rules:**
+
 - Max line length: 120 characters (except code blocks and tables)
 - Consistent heading styles
 - Proper list formatting
 
 ### 4. **ESLint + Prettier** - TypeScript Code
+
 Lints TypeScript code in the `ai-triage/` action.
 
 **Configuration:**
+
 - `ai-triage/.eslintrc.json`
 - `ai-triage/package.json` (prettier config)
 
 **Key Rules:**
+
 - TypeScript strict mode
 - GitHub Actions best practices (via `eslint-plugin-github`)
 - Consistent code formatting
@@ -58,6 +68,7 @@ make install-lint-tools
 ```
 
 This installs:
+
 - yamllint (via pip)
 - actionlint (via curl)
 - markdownlint-cli (via npm)
@@ -100,6 +111,7 @@ make pre-commit-install
 ### What Gets Checked
 
 When you run `git commit`, the following checks run automatically:
+
 1. Trailing whitespace removal
 2. End-of-file fixer
 3. YAML syntax validation
@@ -162,7 +174,8 @@ All jobs must pass for PR to be mergeable.
 ### yamllint: Line Too Long
 
 **Error:**
-```
+
+```text
 error: line too long (132 > 120 characters) (line-length)
 ```
 
@@ -182,7 +195,8 @@ Break long lines using YAML multiline syntax:
 ### actionlint: Unknown Action
 
 **Error:**
-```
+
+```text
 error: unknown action "actions/nonexistent-action@v1"
 ```
 
@@ -196,7 +210,8 @@ gh api repos/actions/nonexistent-action
 ### markdownlint: MD013 Line Length
 
 **Error:**
-```
+
+```text
 MD013/line-length: Line length [warning]
 ```
 
@@ -206,7 +221,8 @@ Break long lines or add exception to `.markdownlint.json` if needed (e.g., for U
 ### ESLint: Unused Variable
 
 **Error:**
-```
+
+```text
 error: 'foo' is defined but never used
 ```
 
@@ -320,16 +336,19 @@ Recommended `.vscode/settings.json`:
 ## Best Practices
 
 1. **Run linters before committing**
+
    ```bash
    make lint
    ```
 
 2. **Fix auto-fixable issues**
+
    ```bash
    make fix
    ```
 
 3. **Use pre-commit hooks** - Catches issues early
+
    ```bash
    make pre-commit-install
    ```

@@ -33,6 +33,7 @@ permissions:
 ### Default Workflow Triggers
 
 The action includes built-in trigger logic. No `if` conditions needed! The action automatically runs when:
+
 - Issue is opened
 - `needs-triage` label is added
 - `triage:backlog` label is added
