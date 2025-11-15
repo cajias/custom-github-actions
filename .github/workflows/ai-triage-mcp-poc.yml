@@ -45,7 +45,7 @@ jobs:
 
       - name: AI Analysis with MCP
         id: ai_analysis
-        uses: actions/ai-inference@v1.2
+        uses: actions/ai-inference@v2.0.1
         with:
           model: openai/gpt-4o
           max-tokens: 2000
