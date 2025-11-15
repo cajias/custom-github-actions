@@ -52,32 +52,36 @@ export async function fetchExistingSubtasks(
     }
 
     // Fetch full details for each subtask
-    const subtasks = [];
-    for (const number of subtaskNumbers) {
+    // Fetch full details for each subtask in parallel
+    const subtaskPromises = Array.from(subtaskNumbers).map(async (number) => {
       try {
         const { data: issue } = await ctx.octokit.rest.issues.get({
           owner: ctx.owner,
           repo: ctx.repo,
           issue_number: number,
         });
-
         // Only include if the issue body actually references the parent
         if (
           issue.body &&
           (issue.body.includes(`#${ctx.issueNumber}`) ||
             issue.body.includes(`${ctx.owner}/${ctx.repo}#${ctx.issueNumber}`))
         ) {
-          subtasks.push({
+          return {
             number: issue.number,
             title: issue.title,
             body: issue.body || "",
             state: issue.state,
-          });
+          };
         }
+        return null;
       } catch (error) {
         core.warning(`Failed to fetch issue #${number}: ${error}`);
+        return null;
       }
-    }
+    });
+    const subtasks = (await Promise.all(subtaskPromises)).filter(
+      (subtask) => subtask !== null
+    );
 
     core.info(`Found ${subtasks.length} existing subtasks`);
     return subtasks;
