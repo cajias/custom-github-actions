@@ -7,6 +7,19 @@ export type Priority = "P0" | "P1" | "P2";
 export type Size = "XS" | "S" | "M" | "L" | "XL";
 export type Status = "Backlog" | "Ready" | "In progress" | "In review" | "Done";
 /**
+ * Existing subtask information fetched from GitHub
+ */
+export interface ExistingSubtask {
+    /** Issue number */
+    number: number;
+    /** Issue title */
+    title: string;
+    /** Issue body */
+    body: string;
+    /** Issue state (open/closed) */
+    state: string;
+}
+/**
  * Subtask information for creating new subtasks
  */
 export interface SubtaskInfo {

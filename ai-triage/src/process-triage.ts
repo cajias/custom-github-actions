@@ -175,10 +175,13 @@ async function handleSubtasks(
     );
     if (createdIssues.length !== analysis.subtasks_to_create.length) {
       core.warning(
-        `⚠️ Only ${createdIssues.length} out of ${analysis.subtasks_to_create.length} subtasks were created. Some subtasks may have failed to create.`
+        `⚠️ Only ${createdIssues.length} out of ${analysis.subtasks_to_create.length} subtasks were created. Some subtasks may have failed to create.`,
       );
     }
-    core.info(`✅ Created ${createdIssues.length} subtasks (requested: ${analysis.subtasks_to_create.length})`);
+    core.info(
+      `✅ Created ${createdIssues.length} subtasks (requested: ${analysis.subtasks_to_create.length})`,
+    );
+  }
 
   // Post feedback on existing subtasks
   if (

@@ -3,7 +3,12 @@
  */
 
 import * as core from "@actions/core";
-import { ActionContext, SubtaskInfo, SubtaskFeedback } from "./types";
+import {
+  ActionContext,
+  SubtaskInfo,
+  SubtaskFeedback,
+  ExistingSubtask,
+} from "./types";
 
 /**
  * Fetch existing subtasks for an issue
@@ -11,9 +16,7 @@ import { ActionContext, SubtaskInfo, SubtaskFeedback } from "./types";
  */
 export async function fetchExistingSubtasks(
   ctx: ActionContext,
-): Promise<
-  Array<{ number: number; title: string; body: string; state: string }>
-> {
+): Promise<ExistingSubtask[]> {
   core.info(`Fetching existing subtasks for issue #${ctx.issueNumber}...`);
 
   try {
@@ -32,7 +35,7 @@ export async function fetchExistingSubtasks(
       const eventAny = event as any;
       if (event.event === "cross-referenced" && eventAny.source) {
         const source = eventAny.source;
-        if (source.issue) {
+        if (source.issue && source.issue.number !== ctx.issueNumber) {
           subtaskNumbers.add(source.issue.number);
         }
       }
@@ -51,36 +54,41 @@ export async function fetchExistingSubtasks(
       }
     }
 
-    // Fetch full details for each subtask
     // Fetch full details for each subtask in parallel
-    const subtaskPromises = Array.from(subtaskNumbers).map(async (number) => {
-      try {
-        const { data: issue } = await ctx.octokit.rest.issues.get({
-          owner: ctx.owner,
-          repo: ctx.repo,
-          issue_number: number,
-        });
-        // Only include if the issue body actually references the parent
-        if (
-          issue.body &&
-          (issue.body.includes(`#${ctx.issueNumber}`) ||
-            issue.body.includes(`${ctx.owner}/${ctx.repo}#${ctx.issueNumber}`))
-        ) {
-          return {
-            number: issue.number,
-            title: issue.title,
-            body: issue.body || "",
-            state: issue.state,
-          };
+    const subtaskPromises = Array.from(subtaskNumbers).map(
+      async (number): Promise<ExistingSubtask | null> => {
+        try {
+          const { data: issue } = await ctx.octokit.rest.issues.get({
+            owner: ctx.owner,
+            repo: ctx.repo,
+            issue_number: number,
+          });
+          // Only include if the issue body actually references the parent
+          if (
+            issue.body &&
+            (issue.body.includes(`#${ctx.issueNumber}`) ||
+              issue.body.includes(
+                `${ctx.owner}/${ctx.repo}#${ctx.issueNumber}`,
+              ))
+          ) {
+            return {
+              number: issue.number,
+              title: issue.title,
+              body: issue.body || "",
+              state: issue.state,
+            };
+          }
+          return null;
+        } catch (error) {
+          core.warning(`Failed to fetch issue #${number}: ${error}`);
+          return null;
         }
-        return null;
-      } catch (error) {
-        core.warning(`Failed to fetch issue #${number}: ${error}`);
-        return null;
-      }
-    });
-    const subtasks = (await Promise.all(subtaskPromises)).filter(
-      (subtask) => subtask !== null
+      },
+    );
+
+    const results = await Promise.all(subtaskPromises);
+    const subtasks = results.filter(
+      (subtask): subtask is ExistingSubtask => subtask !== null,
     );
 
     core.info(`Found ${subtasks.length} existing subtasks`);
@@ -101,8 +109,11 @@ export async function createSubtasks(
   core.info(`Creating ${subtasks.length} subtasks...`);
 
   const createdIssues: number[] = [];
+  const issueNumberMap = new Map<number, number>(); // Map AI issue numbers to actual created issue numbers
 
-  for (const subtask of subtasks) {
+  // First pass: create all subtasks
+  for (let i = 0; i < subtasks.length; i++) {
+    const subtask = subtasks[i];
     try {
       // Add reference to parent issue in the body
       const bodyWithParent = `${subtask.body}\n\n---\n\nParent task: #${ctx.issueNumber}`;
@@ -117,6 +128,8 @@ export async function createSubtasks(
       });
 
       createdIssues.push(newIssue.number);
+      // Store mapping if AI specified an issue number (index-based placeholder)
+      issueNumberMap.set(i, newIssue.number);
       core.info(`✅ Created subtask #${newIssue.number}: ${subtask.title}`);
 
       // Add a comment to the parent issue with priority and size info
@@ -127,19 +140,34 @@ export async function createSubtasks(
         issue_number: ctx.issueNumber,
         body: `✅ Created subtask: #${newIssue.number} - ${subtask.title}\n\n${metaInfo}`,
       });
+    } catch (error) {
+      core.error(`Failed to create subtask "${subtask.title}": ${error}`);
+    }
+  }
 
-      // If there are blocked_by relationships, add them as comments
-      if (subtask.blocked_by.length > 0) {
+  // Second pass: add blocked_by comments now that all issues are created
+  for (let i = 0; i < subtasks.length; i++) {
+    const subtask = subtasks[i];
+    const newIssueNumber = issueNumberMap.get(i);
+
+    if (!newIssueNumber) {
+      continue; // Skip if this subtask failed to create
+    }
+
+    if (subtask.blocked_by.length > 0) {
+      try {
         const blockedByText = subtask.blocked_by.map((n) => `#${n}`).join(", ");
         await ctx.octokit.rest.issues.createComment({
           owner: ctx.owner,
           repo: ctx.repo,
-          issue_number: newIssue.number,
+          issue_number: newIssueNumber,
           body: `⚠️ **Blocked By:** ${blockedByText}\n\nThis subtask depends on the completion of the above tasks. Please complete those before starting this one.`,
         });
+      } catch (error) {
+        core.warning(
+          `Failed to add blocked_by comment to subtask #${newIssueNumber}: ${error}`,
+        );
       }
-    } catch (error) {
-      core.error(`Failed to create subtask "${subtask.title}": ${error}`);
     }
   }
 

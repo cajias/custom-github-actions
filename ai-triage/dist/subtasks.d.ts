@@ -1,17 +1,12 @@
 /**
  * Handle subtask operations - fetching existing subtasks and creating new ones
  */
-import { ActionContext, SubtaskInfo, SubtaskFeedback } from "./types";
+import { ActionContext, SubtaskInfo, SubtaskFeedback, ExistingSubtask } from "./types";
 /**
  * Fetch existing subtasks for an issue
  * Subtasks are identified by issues that reference the parent issue
  */
-export declare function fetchExistingSubtasks(ctx: ActionContext): Promise<Array<{
-    number: number;
-    title: string;
-    body: string;
-    state: string;
-}>>;
+export declare function fetchExistingSubtasks(ctx: ActionContext): Promise<ExistingSubtask[]>;
 /**
  * Create new subtasks for an issue
  */

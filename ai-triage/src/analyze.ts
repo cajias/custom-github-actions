@@ -3,7 +3,7 @@
  */
 
 import * as core from "@actions/core";
-import { ActionContext, TriageAnalysis } from "./types";
+import { ActionContext, TriageAnalysis, ExistingSubtask } from "./types";
 import { getModelConfig, callModel } from "./model-providers";
 
 /**
@@ -15,12 +15,7 @@ export async function analyzeIssue(
   anthropicKey: string,
   openaiKey: string,
   githubToken: string,
-  existingSubtasks?: Array<{
-    number: number;
-    title: string;
-    body: string;
-    state: string;
-  }>,
+  existingSubtasks?: ExistingSubtask[],
 ): Promise<TriageAnalysis> {
   core.info(`Analyzing issue #${ctx.issueNumber} with ${model}...`);
 
@@ -152,12 +147,7 @@ function buildUserPrompt(
   title: string,
   body: string,
   ctx: ActionContext,
-  existingSubtasks?: Array<{
-    number: number;
-    title: string;
-    body: string;
-    state: string;
-  }>,
+  existingSubtasks?: ExistingSubtask[],
 ): string {
   let prompt = `**Issue Title:** ${title}
 
@@ -170,8 +160,19 @@ ${body}
   // Include existing subtasks if present
   if (existingSubtasks && existingSubtasks.length > 0) {
     prompt += `\n\n**Existing Subtasks:**`;
-    for (const subtask of existingSubtasks) {
-      prompt += `\n\n#${subtask.number} - ${subtask.title} [${subtask.state}]\n${subtask.body}`;
+    const maxSubtasks = 10; // Limit number of subtasks to avoid token limits
+    const maxBodyLength = 500; // Truncate long bodies
+
+    for (const subtask of existingSubtasks.slice(0, maxSubtasks)) {
+      const truncatedBody =
+        subtask.body.length > maxBodyLength
+          ? `${subtask.body.substring(0, maxBodyLength)}...(truncated)`
+          : subtask.body;
+      prompt += `\n\n#${subtask.number} - ${subtask.title} [${subtask.state}]\n${truncatedBody}`;
+    }
+
+    if (existingSubtasks.length > maxSubtasks) {
+      prompt += `\n\n... and ${existingSubtasks.length - maxSubtasks} more subtasks`;
     }
   }
 
@@ -270,8 +271,6 @@ function validateAnalysis(analysis: any): asserts analysis is TriageAnalysis {
 
   // Validate subtask structure
   for (const subtask of analysis.subtasks_to_create) {
-    const allowedPriorities = ["critical", "high", "medium", "low"];
-    const allowedSizes = ["xs", "s", "m", "l", "xl"];
     if (
       typeof subtask.title !== "string" ||
       subtask.title.trim().length === 0 ||
@@ -279,13 +278,11 @@ function validateAnalysis(analysis: any): asserts analysis is TriageAnalysis {
       subtask.body.trim().length === 0 ||
       !Array.isArray(subtask.blocked_by) ||
       !Array.isArray(subtask.labels) ||
-      typeof subtask.priority !== "string" ||
-      !allowedPriorities.includes(subtask.priority) ||
-      typeof subtask.size !== "string" ||
-      !allowedSizes.includes(subtask.size)
+      !["P0", "P1", "P2"].includes(subtask.priority) ||
+      !["XS", "S", "M", "L", "XL"].includes(subtask.size)
     ) {
       throw new Error(
-        "Each subtask must have a non-empty string title and body, blocked_by and labels as arrays, priority and size as valid strings",
+        "Each subtask must have non-empty string title and body, blocked_by and labels as arrays, and valid priority (P0/P1/P2) and size (XS/S/M/L/XL)",
       );
     }
   }

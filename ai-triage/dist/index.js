@@ -30017,7 +30017,7 @@ Return a JSON object with this EXACT structure:
     {
       "title": "string",
       "body": "detailed description with acceptance criteria",
-      "blocked_by": [issue_numbers within same parent],
+      "blocked_by": [101, 102],
       "labels": ["type:*", ...],
       "priority": "P0" | "P1" | "P2",
       "size": "XS" | "S" | "M" | "L" | "XL"
@@ -30069,7 +30069,7 @@ SUBTASK GUIDELINES:
 - Parent task should be generic and describe acceptance criteria
 - Subtasks should be specific with proper detail level
 - Each subtask should answer all questions needed for successful completion
-- Subtasks should link to other subtasks they're blocked by (blocked_by field)
+- Subtasks should link to other subtasks they are blocked by (blocked_by field)
 - When subtasks exist, evaluate them individually and as a whole
 - Check if subtasks correctly track requirements and acceptance criteria of parent
 - Ensure subtasks provide proper ordering via blocked_by relationships
@@ -30090,8 +30090,16 @@ ${body}
     // Include existing subtasks if present
     if (existingSubtasks && existingSubtasks.length > 0) {
         prompt += `\n\n**Existing Subtasks:**`;
-        for (const subtask of existingSubtasks) {
-            prompt += `\n\n#${subtask.number} - ${subtask.title} [${subtask.state}]\n${subtask.body}`;
+        const maxSubtasks = 10; // Limit number of subtasks to avoid token limits
+        const maxBodyLength = 500; // Truncate long bodies
+        for (const subtask of existingSubtasks.slice(0, maxSubtasks)) {
+            const truncatedBody = subtask.body.length > maxBodyLength
+                ? `${subtask.body.substring(0, maxBodyLength)}...(truncated)`
+                : subtask.body;
+            prompt += `\n\n#${subtask.number} - ${subtask.title} [${subtask.state}]\n${truncatedBody}`;
+        }
+        if (existingSubtasks.length > maxSubtasks) {
+            prompt += `\n\n... and ${existingSubtasks.length - maxSubtasks} more subtasks`;
         }
     }
     prompt += `\n\nAnalyze this issue and provide triage information in JSON format. Consider whether this task needs subtasks or if existing subtasks need feedback.`;
@@ -30172,13 +30180,15 @@ function validateAnalysis(analysis) {
     }
     // Validate subtask structure
     for (const subtask of analysis.subtasks_to_create) {
-        if (!subtask.title ||
-            !subtask.body ||
+        if (typeof subtask.title !== "string" ||
+            subtask.title.trim().length === 0 ||
+            typeof subtask.body !== "string" ||
+            subtask.body.trim().length === 0 ||
             !Array.isArray(subtask.blocked_by) ||
             !Array.isArray(subtask.labels) ||
-            !subtask.priority ||
-            !subtask.size) {
-            throw new Error("Each subtask must have title, body, blocked_by, labels, priority, and size");
+            !["P0", "P1", "P2"].includes(subtask.priority) ||
+            !["XS", "S", "M", "L", "XL"].includes(subtask.size)) {
+            throw new Error("Each subtask must have non-empty string title and body, blocked_by and labels as arrays, and valid priority (P0/P1/P2) and size (XS/S/M/L/XL)");
         }
     }
     // Validate subtask feedback structure
@@ -30773,7 +30783,10 @@ async function handleSubtasks(ctx, analysis) {
     if (analysis.needs_subtasks && analysis.subtasks_to_create.length > 0) {
         core.info(`Creating ${analysis.subtasks_to_create.length} new subtasks...`);
         const createdIssues = await (0, subtasks_1.createSubtasks)(ctx, analysis.subtasks_to_create);
-        core.info(`✅ Created ${createdIssues.length} subtasks`);
+        if (createdIssues.length !== analysis.subtasks_to_create.length) {
+            core.warning(`⚠️ Only ${createdIssues.length} out of ${analysis.subtasks_to_create.length} subtasks were created. Some subtasks may have failed to create.`);
+        }
+        core.info(`✅ Created ${createdIssues.length} subtasks (requested: ${analysis.subtasks_to_create.length})`);
     }
     // Post feedback on existing subtasks
     if (analysis.subtask_feedback.length > 0 ||
@@ -30870,7 +30883,7 @@ async function fetchExistingSubtasks(ctx) {
             const eventAny = event;
             if (event.event === "cross-referenced" && eventAny.source) {
                 const source = eventAny.source;
-                if (source.issue) {
+                if (source.issue && source.issue.number !== ctx.issueNumber) {
                     subtaskNumbers.add(source.issue.number);
                 }
             }
@@ -30886,9 +30899,8 @@ async function fetchExistingSubtasks(ctx) {
                 subtaskNumbers.add(issue.number);
             }
         }
-        // Fetch full details for each subtask
-        const subtasks = [];
-        for (const number of subtaskNumbers) {
+        // Fetch full details for each subtask in parallel
+        const subtaskPromises = Array.from(subtaskNumbers).map(async (number) => {
             try {
                 const { data: issue } = await ctx.octokit.rest.issues.get({
                     owner: ctx.owner,
@@ -30899,18 +30911,22 @@ async function fetchExistingSubtasks(ctx) {
                 if (issue.body &&
                     (issue.body.includes(`#${ctx.issueNumber}`) ||
                         issue.body.includes(`${ctx.owner}/${ctx.repo}#${ctx.issueNumber}`))) {
-                    subtasks.push({
+                    return {
                         number: issue.number,
                         title: issue.title,
                         body: issue.body || "",
                         state: issue.state,
-                    });
+                    };
                 }
+                return null;
             }
             catch (error) {
                 core.warning(`Failed to fetch issue #${number}: ${error}`);
+                return null;
             }
-        }
+        });
+        const results = await Promise.all(subtaskPromises);
+        const subtasks = results.filter((subtask) => subtask !== null);
         core.info(`Found ${subtasks.length} existing subtasks`);
         return subtasks;
     }
@@ -30925,7 +30941,10 @@ async function fetchExistingSubtasks(ctx) {
 async function createSubtasks(ctx, subtasks) {
     core.info(`Creating ${subtasks.length} subtasks...`);
     const createdIssues = [];
-    for (const subtask of subtasks) {
+    const issueNumberMap = new Map(); // Map AI issue numbers to actual created issue numbers
+    // First pass: create all subtasks
+    for (let i = 0; i < subtasks.length; i++) {
+        const subtask = subtasks[i];
         try {
             // Add reference to parent issue in the body
             const bodyWithParent = `${subtask.body}\n\n---\n\nParent task: #${ctx.issueNumber}`;
@@ -30938,6 +30957,8 @@ async function createSubtasks(ctx, subtasks) {
                 labels: subtask.labels,
             });
             createdIssues.push(newIssue.number);
+            // Store mapping if AI specified an issue number (index-based placeholder)
+            issueNumberMap.set(i, newIssue.number);
             core.info(`✅ Created subtask #${newIssue.number}: ${subtask.title}`);
             // Add a comment to the parent issue with priority and size info
             const metaInfo = `Priority: ${subtask.priority} | Size: ${subtask.size}`;
@@ -30947,19 +30968,31 @@ async function createSubtasks(ctx, subtasks) {
                 issue_number: ctx.issueNumber,
                 body: `✅ Created subtask: #${newIssue.number} - ${subtask.title}\n\n${metaInfo}`,
             });
-            // If there are blocked_by relationships, add them as comments
-            if (subtask.blocked_by.length > 0) {
+        }
+        catch (error) {
+            core.error(`Failed to create subtask "${subtask.title}": ${error}`);
+        }
+    }
+    // Second pass: add blocked_by comments now that all issues are created
+    for (let i = 0; i < subtasks.length; i++) {
+        const subtask = subtasks[i];
+        const newIssueNumber = issueNumberMap.get(i);
+        if (!newIssueNumber) {
+            continue; // Skip if this subtask failed to create
+        }
+        if (subtask.blocked_by.length > 0) {
+            try {
                 const blockedByText = subtask.blocked_by.map((n) => `#${n}`).join(", ");
                 await ctx.octokit.rest.issues.createComment({
                     owner: ctx.owner,
                     repo: ctx.repo,
-                    issue_number: newIssue.number,
+                    issue_number: newIssueNumber,
                     body: `⚠️ **Blocked By:** ${blockedByText}\n\nThis subtask depends on the completion of the above tasks. Please complete those before starting this one.`,
                 });
             }
-        }
-        catch (error) {
-            core.error(`Failed to create subtask "${subtask.title}": ${error}`);
+            catch (error) {
+                core.warning(`Failed to add blocked_by comment to subtask #${newIssueNumber}: ${error}`);
+            }
         }
     }
     return createdIssues;
