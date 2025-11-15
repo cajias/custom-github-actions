@@ -137,7 +137,7 @@ SUBTASK GUIDELINES:
 - Parent task should be generic and describe acceptance criteria
 - Subtasks should be specific with proper detail level
 - Each subtask should answer all questions needed for successful completion
-- Subtasks should link to other subtasks they're blocked by (blocked_by field)
+- Subtasks should link to other subtasks they are blocked by (blocked_by field)
 - When subtasks exist, evaluate them individually and as a whole
 - Check if subtasks correctly track requirements and acceptance criteria of parent
 - Ensure subtasks provide proper ordering via blocked_by relationships
