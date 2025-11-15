@@ -109,7 +109,8 @@ export async function createSubtasks(
   core.info(`Creating ${subtasks.length} subtasks...`);
 
   const createdIssues: number[] = [];
-  const issueNumberMap = new Map<number, number>(); // Map AI issue numbers to actual created issue numbers
+  const issueNumberMap = new Map<number, number>();
+  const parentCommentLines: string[] = [];
 
   // First pass: create all subtasks
   for (let i = 0; i < subtasks.length; i++) {
@@ -128,20 +129,31 @@ export async function createSubtasks(
       });
 
       createdIssues.push(newIssue.number);
-      // Store mapping if AI specified an issue number (index-based placeholder)
       issueNumberMap.set(i, newIssue.number);
       core.info(`✅ Created subtask #${newIssue.number}: ${subtask.title}`);
 
-      // Add a comment to the parent issue with priority and size info
+      // Collect info for batched parent comment
       const metaInfo = `Priority: ${subtask.priority} | Size: ${subtask.size}`;
+      parentCommentLines.push(
+        `- #${newIssue.number} - ${subtask.title} (${metaInfo})`,
+      );
+    } catch (error) {
+      core.error(`Failed to create subtask "${subtask.title}": ${error}`);
+    }
+  }
+
+  // Post a single batched comment to parent issue with all created subtasks
+  if (parentCommentLines.length > 0) {
+    try {
+      const batchedComment = `✅ **Created ${parentCommentLines.length} subtask(s):**\n\n${parentCommentLines.join("\n")}`;
       await ctx.octokit.rest.issues.createComment({
         owner: ctx.owner,
         repo: ctx.repo,
         issue_number: ctx.issueNumber,
-        body: `✅ Created subtask: #${newIssue.number} - ${subtask.title}\n\n${metaInfo}`,
+        body: batchedComment,
       });
     } catch (error) {
-      core.error(`Failed to create subtask "${subtask.title}": ${error}`);
+      core.warning(`Failed to post batched comment on parent issue: ${error}`);
     }
   }
 
