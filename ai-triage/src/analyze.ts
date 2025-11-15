@@ -85,7 +85,7 @@ Return a JSON object with this EXACT structure:
     {
       "title": "string",
       "body": "detailed description with acceptance criteria",
-      "blocked_by": [issue_numbers within same parent],
+      "blocked_by": [101, 102],
       "labels": ["type:*", ...],
       "priority": "P0" | "P1" | "P2",
       "size": "XS" | "S" | "M" | "L" | "XL"
