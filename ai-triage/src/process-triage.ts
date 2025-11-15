@@ -173,8 +173,12 @@ async function handleSubtasks(
       ctx,
       analysis.subtasks_to_create,
     );
-    core.info(`✅ Created ${createdIssues.length} subtasks`);
-  }
+    if (createdIssues.length !== analysis.subtasks_to_create.length) {
+      core.warning(
+        `⚠️ Only ${createdIssues.length} out of ${analysis.subtasks_to_create.length} subtasks were created. Some subtasks may have failed to create.`
+      );
+    }
+    core.info(`✅ Created ${createdIssues.length} subtasks (requested: ${analysis.subtasks_to_create.length})`);
 
   // Post feedback on existing subtasks
   if (
