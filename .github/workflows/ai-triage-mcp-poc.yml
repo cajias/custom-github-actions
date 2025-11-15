@@ -106,8 +106,15 @@ jobs:
             core.info(response);
 
             try {
-              // Extract JSON from response (in case there's extra text)
-              const jsonMatch = response.match(/\{[\s\S]*\}/);
+              // Extract JSON from response, handling markdown code fences
+              let jsonText = response;
+
+              // Remove markdown code fences if present
+              jsonText = jsonText.replace(/^```json\s*/m, '');  // Remove opening fence
+              jsonText = jsonText.replace(/\s*```\s*$/m, '');   // Remove closing fence
+
+              // Extract JSON object
+              const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
               if (!jsonMatch) {
                 throw new Error('No JSON object found in response');
               }
