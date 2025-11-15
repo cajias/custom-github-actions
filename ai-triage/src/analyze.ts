@@ -270,16 +270,22 @@ function validateAnalysis(analysis: any): asserts analysis is TriageAnalysis {
 
   // Validate subtask structure
   for (const subtask of analysis.subtasks_to_create) {
+    const allowedPriorities = ["critical", "high", "medium", "low"];
+    const allowedSizes = ["xs", "s", "m", "l", "xl"];
     if (
-      !subtask.title ||
-      !subtask.body ||
+      typeof subtask.title !== "string" ||
+      subtask.title.trim().length === 0 ||
+      typeof subtask.body !== "string" ||
+      subtask.body.trim().length === 0 ||
       !Array.isArray(subtask.blocked_by) ||
       !Array.isArray(subtask.labels) ||
-      !subtask.priority ||
-      !subtask.size
+      typeof subtask.priority !== "string" ||
+      !allowedPriorities.includes(subtask.priority) ||
+      typeof subtask.size !== "string" ||
+      !allowedSizes.includes(subtask.size)
     ) {
       throw new Error(
-        "Each subtask must have title, body, blocked_by, labels, priority, and size",
+        "Each subtask must have a non-empty string title and body, blocked_by and labels as arrays, priority and size as valid strings",
       );
     }
   }
