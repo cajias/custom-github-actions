@@ -104,6 +104,7 @@ Next-generation AI triage using GitHub Models API with Model Context Protocol.
 **Documentation:**
 
 - [Action README](./ai-triage-mcp/README.md)
+- [Testing Guide](./ai-triage-mcp/TESTING.md)
 - [POC Validation](./docs/ai-triage-mcp-poc.md)
 - [v1 vs v2 Comparison](./docs/ai-triage-comparison.md)
 

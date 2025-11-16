@@ -547,9 +547,45 @@ jobs:
           echo "Complexity: ${{ steps.triage.outputs.complexity }}"
 ```
 
+## Testing
+
+This action includes comprehensive integration tests to ensure reliability.
+
+### Running Tests
+
+Tests are automatically run on:
+
+- Pull requests that modify the action
+- Weekly schedule (Sundays at midnight UTC)
+- Manual workflow dispatch
+
+To run tests manually:
+
+```bash
+# Using GitHub CLI
+gh workflow run test-ai-triage-mcp.yml
+
+# Or from GitHub UI: Actions → Integration Tests - AI Triage MCP → Run workflow
+```
+
+### Test Coverage
+
+- ✅ Basic triage functionality (labels, comments)
+- ✅ Subtask creation for complex issues
+- ✅ Error handling and edge cases
+- ✅ Automatic cleanup of test artifacts
+
+For detailed testing documentation, see [TESTING.md](./TESTING.md).
+
 ## Contributing
 
 Contributions welcome! This action is part of the [Agentic Applications](https://github.com/users/cajias/projects/4) project.
+
+When submitting changes:
+
+1. Run integration tests with your changes
+1. Update documentation if behavior changes
+1. Follow existing code style and patterns
 
 ## References
 
