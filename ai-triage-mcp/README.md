@@ -3,6 +3,8 @@
 AI-powered GitHub issue triage using GitHub Models API with Model Context Protocol (MCP) for automatic
 tool use and context gathering.
 
+> **🚀 Quick Start:** New to this action? See [QUICKSTART.md](./QUICKSTART.md) for a 5-minute setup guide.
+
 ## Overview
 
 This action provides next-generation AI triage using:
