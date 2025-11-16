@@ -63,13 +63,16 @@ AI-powered GitHub issue triage with multi-provider support (GitHub Models, Anthr
 
 ---
 
-## 🧪 Experimental: AI Triage POC (MCP + GitHub Script)
+## 🚀 [AI Issue Triage v2 (MCP + GitHub Script)](./ai-triage-mcp/)
 
-Next-generation AI triage using:
+Next-generation AI triage using GitHub Models API with Model Context Protocol.
 
-- **GitHub Models API** (GPT-4o) - Free tier available
-- **Model Context Protocol (MCP)** - Automatic tool use with ReAct loops
+**Features:**
+
+- **GitHub Models API** (GPT-4o) - Free tier available, no API key needed
+- **Model Context Protocol (MCP)** - Optional automatic tool use with ReAct loops
 - **GitHub Script** - Deterministic write operations
+- **Native Sub-issues** - Creates proper parent-child issue relationships
 
 **Key Improvements over v1:**
 
@@ -78,12 +81,29 @@ Next-generation AI triage using:
 - ✅ Better separation: AI for analysis, Script for operations
 - ✅ Read-only MCP (safer by design)
 
-**Status:** POC validation phase - testing alongside v1
+**Minimal Usage:**
+
+```yaml
+- uses: cajias/custom-github-actions/ai-triage-mcp@main
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    # Uses openai/gpt-4o by default (free tier available)
+```
+
+**With MCP (Enhanced Context):**
+
+```yaml
+- uses: cajias/custom-github-actions/ai-triage-mcp@main
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    enable-github-mcp: true
+    github-mcp-token: ${{ secrets.TRIAGE_PAT }}
+```
 
 **Documentation:**
 
-- [POC Documentation](./docs/ai-triage-mcp-poc.md)
-- [Architecture Validation](./docs/ai-triage-mcp-poc.md#validated-assumptions)
+- [Action README](./ai-triage-mcp/README.md)
+- [POC Validation](./docs/ai-triage-mcp-poc.md)
 
 ---
 

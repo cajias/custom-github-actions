@@ -1,6 +1,9 @@
 # AI Triage POC - MCP + GitHub Script
 
-This POC demonstrates a hybrid architecture for AI-powered issue triage using:
+> **✅ POC COMPLETED:** This proof-of-concept has been successfully validated and converted into a reusable
+> GitHub Action. See [ai-triage-mcp](../ai-triage-mcp/) for the production-ready version.
+
+This document describes the original POC that validated a hybrid architecture for AI-powered issue triage using:
 
 - **GitHub Models API** (GPT-4o) for AI inference
 - **Model Context Protocol (MCP)** for read-only GitHub tools access
@@ -240,39 +243,30 @@ which creates native GitHub sub-issue relationships. This enables:
 - **Cause:** Too many AI inference calls
 - **Fix:** GitHub Models has rate limits (check quotas)
 
-## Migration Path
+## Production Action
 
-To migrate your existing `ai-triage` action to this architecture:
+The POC has been converted into a reusable GitHub Action: **[ai-triage-mcp](../ai-triage-mcp/)**
 
-1. **Phase 1: POC Validation** (Current)
-   - Deploy this POC alongside existing action
-   - Test on non-critical repositories
-   - Compare results with current implementation
+**Use the action instead of this POC workflow:**
 
-2. **Phase 2: Feature Parity**
-   - Add project field updates
-   - Add repository-specific configurations
-   - Add custom label mappings
-   - Add support for multiple issue types
+```yaml
+- uses: cajias/custom-github-actions/ai-triage-mcp@main
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    enable-github-mcp: true
+    github-mcp-token: ${{ secrets.TRIAGE_PAT }}
+```
 
-3. **Phase 3: Gradual Migration**
-   - Update one repository at a time
-   - Monitor for regressions
-   - Gather user feedback
+See the [action README](../ai-triage-mcp/README.md) for complete documentation.
 
-4. **Phase 4: Deprecation**
-   - Archive old `ai-triage` action
-   - Update documentation
-   - Migrate all repositories
+## POC Status
 
-## Next Steps
-
-1. ✅ **Validate POC** - Test on sample issues
-2. ⬜ **Add Project Support** - Update project fields via GraphQL
-3. ⬜ **Add Configuration** - Repository-specific triage rules
-4. ⬜ **Improve Prompts** - Refine based on real results
-5. ⬜ **Add Analytics** - Track triage accuracy
-6. ⬜ **Production Deploy** - Migrate existing repositories
+1. ✅ **Validate POC** - Tested on sample issues
+2. ✅ **Convert to Action** - Created reusable composite action
+3. ⬜ **Add Project Support** - Update project fields via GraphQL (future)
+4. ⬜ **Add Configuration** - Repository-specific triage rules (future)
+5. ⬜ **Improve Prompts** - Refine based on real results (ongoing)
+6. ⬜ **Production Deploy** - Migrate existing repositories (in progress)
 
 ## Cost Analysis
 
