@@ -207,6 +207,29 @@ jobs:
               core.info(`Created subtask #${newIssue.number}: ${subtask.title}`);
             }
 
+            // Update parent issue to add tasklist (creates sub-issue relationship)
+            if (subtaskNumbers.length > 0) {
+              const { data: parentIssue } = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number
+              });
+
+              const tasklistMarkdown = subtaskNumbers.map(n => `- [ ] #${n}`).join('\n');
+              const currentBody = parentIssue.body || '';
+              const separator = currentBody ? '\n\n' : '';
+              const updatedBody = `${currentBody}${separator}## Subtasks\n${tasklistMarkdown}`;
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                body: updatedBody
+              });
+
+              core.info(`Updated parent issue #${issue_number} with tasklist`);
+            }
+
             core.setOutput('subtask_numbers', subtaskNumbers.join(','));
             return subtaskNumbers;
 
