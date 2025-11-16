@@ -163,6 +163,16 @@ async function addIssueToProject(
     contentId: issueNodeId,
   });
 
+  if (
+    !result.addProjectV2ItemById ||
+    !result.addProjectV2ItemById.item ||
+    !result.addProjectV2ItemById.item.id
+  ) {
+    throw new Error(
+      "Invalid response from GitHub API when adding issue to project",
+    );
+  }
+
   const itemId = result.addProjectV2ItemById.item.id;
   core.info(`✅ Added to project, item ID: ${itemId}`);
 
