@@ -216,7 +216,9 @@ jobs:
               });
 
               const tasklistMarkdown = subtaskNumbers.map(n => `- [ ] #${n}`).join('\n');
-              const updatedBody = `${parentIssue.body}\n\n## Subtasks\n${tasklistMarkdown}`;
+              const currentBody = parentIssue.body || '';
+              const separator = currentBody ? '\n\n' : '';
+              const updatedBody = `${currentBody}${separator}## Subtasks\n${tasklistMarkdown}`;
 
               await github.rest.issues.update({
                 owner: context.repo.owner,
