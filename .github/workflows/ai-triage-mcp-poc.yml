@@ -50,7 +50,7 @@ jobs:
         with:
           model: openai/gpt-4o
           max-tokens: 1500
-          enable-github-mcp: true
+          enable-github-mcp: false
           github-mcp-token: ${{ secrets.TRIAGE_PAT }}
           system-prompt: |
             You are an issue triager with GitHub tools access.
