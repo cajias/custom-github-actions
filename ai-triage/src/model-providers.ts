@@ -157,6 +157,10 @@ async function callAnthropicAPI(
       throw new Error("No response from Anthropic API");
     }
 
+    if (!result.content[0] || !result.content[0].text) {
+      throw new Error("Invalid response structure from Anthropic API");
+    }
+
     const content = result.content[0].text;
     core.debug(`Anthropic response: ${content}`);
 
@@ -215,6 +219,14 @@ async function callOpenAIAPI(
 
     if (!result.choices || result.choices.length === 0) {
       throw new Error("No response from OpenAI API");
+    }
+
+    if (
+      !result.choices[0] ||
+      !result.choices[0].message ||
+      !result.choices[0].message.content
+    ) {
+      throw new Error("Invalid response structure from OpenAI API");
     }
 
     const content = result.choices[0].message.content;
@@ -276,6 +288,14 @@ async function callGitHubModels(
 
     if (!result.choices || result.choices.length === 0) {
       throw new Error("No response from GitHub Models API");
+    }
+
+    if (
+      !result.choices[0] ||
+      !result.choices[0].message ||
+      !result.choices[0].message.content
+    ) {
+      throw new Error("Invalid response structure from GitHub Models API");
     }
 
     const content = result.choices[0].message.content;

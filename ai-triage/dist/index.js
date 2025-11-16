@@ -30423,6 +30423,9 @@ async function callAnthropicAPI(model, apiKey, systemPrompt, userPrompt) {
         if (!result.content || result.content.length === 0) {
             throw new Error("No response from Anthropic API");
         }
+        if (!result.content[0] || !result.content[0].text) {
+            throw new Error("Invalid response structure from Anthropic API");
+        }
         const content = result.content[0].text;
         core.debug(`Anthropic response: ${content}`);
         return content;
@@ -30469,6 +30472,11 @@ async function callOpenAIAPI(model, apiKey, systemPrompt, userPrompt) {
         const result = (await response.json());
         if (!result.choices || result.choices.length === 0) {
             throw new Error("No response from OpenAI API");
+        }
+        if (!result.choices[0] ||
+            !result.choices[0].message ||
+            !result.choices[0].message.content) {
+            throw new Error("Invalid response structure from OpenAI API");
         }
         const content = result.choices[0].message.content;
         core.debug(`OpenAI response: ${content}`);
@@ -30517,6 +30525,11 @@ async function callGitHubModels(model, githubToken, systemPrompt, userPrompt) {
         const result = (await response.json());
         if (!result.choices || result.choices.length === 0) {
             throw new Error("No response from GitHub Models API");
+        }
+        if (!result.choices[0] ||
+            !result.choices[0].message ||
+            !result.choices[0].message.content) {
+            throw new Error("Invalid response structure from GitHub Models API");
         }
         const content = result.choices[0].message.content;
         core.debug(`GitHub Models response: ${content}`);
@@ -30863,6 +30876,11 @@ async function addIssueToProject(ctx, projectId) {
         projectId,
         contentId: issueNodeId,
     });
+    if (!result.addProjectV2ItemById ||
+        !result.addProjectV2ItemById.item ||
+        !result.addProjectV2ItemById.item.id) {
+        throw new Error("Invalid response from GitHub API when adding issue to project");
+    }
     const itemId = result.addProjectV2ItemById.item.id;
     core.info(`✅ Added to project, item ID: ${itemId}`);
     return itemId;
