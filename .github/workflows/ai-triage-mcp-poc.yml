@@ -49,40 +49,25 @@ jobs:
         uses: actions/ai-inference@v2.0.1
         with:
           model: openai/gpt-4o
-          max-tokens: 2000
+          max-tokens: 1500
           enable-github-mcp: true
           github-mcp-token: ${{ secrets.TRIAGE_PAT }}
           system-prompt: |
-            You are an expert issue triager with access to GitHub tools.
+            You are an issue triager with GitHub tools access.
 
-            Your task is to analyze issues and provide structured triage data.
-            You can use GitHub MCP tools to:
-            - Search for similar issues
-            - Review related code
-            - Check project history
-
-            IMPORTANT: You must respond with ONLY valid JSON in this exact format:
+            Analyze the issue and return ONLY this JSON structure:
             {
-              "labels": ["type:bug", "priority:high"],
-              "complexity": "medium",
-              "priority": "high",
-              "category": "bug",
-              "needs_subtasks": true,
-              "subtasks": [
-                {"title": "Investigate root cause", "description": "..."},
-                {"title": "Implement fix", "description": "..."}
-              ],
-              "reasoning": "Brief explanation of your analysis",
-              "similar_issues": [123, 456]
+              "labels": ["type:X", "priority:Y"],
+              "complexity": "low|medium|high",
+              "priority": "low|medium|high|critical",
+              "category": "bug|feature|documentation|question|enhancement",
+              "needs_subtasks": true|false,
+              "subtasks": [{"title": "...", "description": "..."}],
+              "reasoning": "Brief explanation",
+              "similar_issues": []
             }
 
-            Rules:
-            - complexity: "low", "medium", or "high"
-            - priority: "low", "medium", "high", or "critical"
-            - category: "bug", "feature", "documentation", "question", or "enhancement"
-            - labels: use existing repo label conventions
-            - subtasks: max 5, only if needs_subtasks is true
-            - similar_issues: issue numbers found via MCP search (empty array if none)
+            Use MCP tools to search for similar issues. Keep responses concise.
           prompt: |
             Analyze this issue and provide triage data:
 
