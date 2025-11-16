@@ -10,7 +10,6 @@ inputs:
   token:
     description: 'GitHub token for API access (requires issues: write permission)'
     required: true
-    default: ${{ github.token }}
 
   github-mcp-token:
     description: 'GitHub token for MCP access (requires repo scope). If not provided, MCP tools are disabled.'
