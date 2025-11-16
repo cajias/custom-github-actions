@@ -327,6 +327,10 @@ This action uses a hybrid architecture:
 
 ## Comparison with v1 (TypeScript)
 
+For a detailed comparison between v1 and v2, see [AI Triage Comparison Guide](../docs/ai-triage-comparison.md).
+
+**Quick comparison:**
+
 | Aspect | v1 (TypeScript) | v2 (MCP + Script) |
 |--------|----------------|-------------------|
 | **Lines of Code** | ~500 | ~200 (YAML) |

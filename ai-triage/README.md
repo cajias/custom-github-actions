@@ -1,5 +1,8 @@
 # AI Issue Triage Action
 
+> **📢 New:** Check out [ai-triage-mcp](../ai-triage-mcp/) (v2) for a simpler, MCP-based implementation with
+> automatic tool use. See [comparison guide](../docs/ai-triage-comparison.md) for differences.
+
 AI-powered GitHub issue triage using multiple AI providers. This action automatically analyzes new issues and:
 
 - **Applies appropriate labels** (type, scope, priority)

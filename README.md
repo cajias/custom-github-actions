@@ -60,6 +60,7 @@ AI-powered GitHub issue triage with multi-provider support (GitHub Models, Anthr
 
 - [Action README](./ai-triage/README.md)
 - [Project Automation Setup](./docs/PROJECT_AUTOMATION.md)
+- [v1 vs v2 Comparison](./docs/ai-triage-comparison.md)
 
 ---
 
@@ -104,6 +105,7 @@ Next-generation AI triage using GitHub Models API with Model Context Protocol.
 
 - [Action README](./ai-triage-mcp/README.md)
 - [POC Validation](./docs/ai-triage-mcp-poc.md)
+- [v1 vs v2 Comparison](./docs/ai-triage-comparison.md)
 
 ---
 
