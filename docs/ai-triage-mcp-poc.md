@@ -33,7 +33,8 @@ This POC demonstrates a hybrid architecture for AI-powered issue triage using:
 │     └─> Add labels via GitHub API                            │
 │                                                               │
 │  5. Create Subtasks (github-script)                          │
-│     └─> Create linked issues via GitHub API                  │
+│     ├─> Create linked issues via GitHub API                  │
+│     └─> Update parent issue with tasklist (sub-issues)       │
 │                                                               │
 │  6. Add Triage Comment (github-script)                       │
 │     └─> Post analysis summary                                │
@@ -163,7 +164,8 @@ When an issue is triaged, you'll see:
 
 1. **Labels added** - Based on AI analysis
 2. **Subtasks created** - As separate issues with `subtask` label
-3. **Comment posted** with:
+3. **Parent issue updated** - Tasklist added to create native sub-issue relationships
+4. **Comment posted** with:
    - Category, priority, complexity
    - AI reasoning
    - Links to similar issues
@@ -192,6 +194,14 @@ logic. The complexity is medium as it requires both backend and test changes.
 ---
 *Generated with [actions/ai-inference](https://github.com/actions/ai-inference) + GitHub MCP*
 ```
+
+**Note:** The parent issue body is also updated with a tasklist referencing the subtasks,
+which creates native GitHub sub-issue relationships. This enables:
+
+- Better UI integration with sub-issue hierarchy display
+- Automatic checkbox updates when subtasks are closed
+- Integration with GitHub Projects v2
+- Improved filtering and querying capabilities
 
 ## Debugging
 
