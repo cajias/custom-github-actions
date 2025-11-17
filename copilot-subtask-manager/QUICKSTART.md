@@ -40,6 +40,7 @@ Create a new parent issue (let's say it becomes #100):
 ## Feature: User Authentication
 
 Implement user authentication system with the following components:
+
 - Database schema
 - Backend API
 - Frontend UI
@@ -50,7 +51,8 @@ Implement user authentication system with the following components:
 
 Create each subtask as a separate issue with the `parent:100` label:
 
-**Issue #101: Database schema for users**
+### Issue #101: Database schema for users
+
 ```markdown
 Title: Database schema for users
 Labels: parent:100
@@ -58,11 +60,13 @@ Labels: parent:100
 Create the database schema for the user authentication system.
 
 Tables needed:
+
 - users (id, email, password_hash, created_at)
 - sessions (id, user_id, token, expires_at)
 ```
 
-**Issue #102: Backend authentication API**
+### Issue #102: Backend authentication API
+
 ```markdown
 Title: Backend authentication API
 Labels: parent:100
@@ -70,6 +74,7 @@ Labels: parent:100
 Implement REST API endpoints for authentication.
 
 Endpoints:
+
 - POST /auth/register
 - POST /auth/login
 - POST /auth/logout
@@ -79,7 +84,8 @@ Endpoints:
 Depends on #101
 ```
 
-**Issue #103: Frontend login UI**
+### Issue #103: Frontend login UI
+
 ```markdown
 Title: Frontend login UI
 Labels: parent:100
@@ -87,12 +93,14 @@ Labels: parent:100
 Create React components for login and registration.
 
 Components:
+
 - LoginForm
 - RegisterForm
 - AuthProvider
 ```
 
-**Issue #104: Integration tests**
+### Issue #104: Integration tests
+
 ```markdown
 Title: Integration tests
 Labels: parent:100
@@ -127,17 +135,21 @@ The Copilot Subtask Manager will:
 3. 💬 **Post a comment** on the parent issue showing the status
 
 When #101's PR is merged:
+
 - ✅ Copilot is **auto-assigned** to #102
 
 When #103's PR is merged:
+
 - ⏸️ #104 is still blocked (needs #102)
 
 When #102's PR is merged:
+
 - ✅ Copilot is **auto-assigned** to #104
 
 ## Expected Timeline
 
 **Without automation:** 2+ hours of manual tracking
+
 - Create parent issue
 - Wait for #101 to complete (~30 min)
 - Manually assign Copilot to #102
@@ -147,10 +159,10 @@ When #102's PR is merged:
 - Wait for #104 to complete (~30 min)
 
 **With automation:** ~2 hours, but fully automated
+
 - Create parent issue and subtasks (5 min)
 - Assign Copilot to parent (30 sec)
 - Everything else happens automatically! ✨
-
 
 ## Tips for Success
 
@@ -178,6 +190,7 @@ When #102's PR is merged:
 ### No subtasks were assigned?
 
 **Check**:
+
 - Subtasks have `parent:{number}` label matching the parent issue number
 - Subtasks exist and are open
 - Subtasks don't all have dependencies
