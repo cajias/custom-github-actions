@@ -209,6 +209,7 @@ Automatically assigns GitHub Copilot to ready subtasks, enabling parallel work o
 Automatically update Homebrew formulas when your project is released.
 
 **Features:**
+
 - Multiple versioning strategies (date-based, semver, custom)
 - Automated GitHub release creation
 - SHA256 calculation and formula updates
@@ -216,6 +217,7 @@ Automatically update Homebrew formulas when your project is released.
 - Customizable release notes
 
 **Minimal Usage:**
+
 ```yaml
 - uses: cajias/custom-github-actions/homebrew-update@main
   with:
@@ -228,7 +230,23 @@ Automatically update Homebrew formulas when your project is released.
     formula_path: Formula/your-formula.rb
 ```
 
+**With Semver Versioning:**
+
+```yaml
+- uses: cajias/custom-github-actions/homebrew-update@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    tap_repo_token: ${{ secrets.TAP_REPO_TOKEN }}
+    github_user: your-username
+    source_repo: your-project
+    tap_repo: homebrew-tools
+    formula_name: your-formula
+    formula_path: Formula/your-formula.rb
+    version_strategy: semver-tag
+```
+
 **Documentation:**
+
 - [Action README](./homebrew-update/README.md)
 
 ---
