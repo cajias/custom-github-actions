@@ -197,6 +197,9 @@ The `tap_repo_token` requires a Personal Access Token (PAT) with:
 5. Click "Generate token"
 6. Copy the token and add it to your source repository secrets as `TAP_REPO_TOKEN`
 
+**For detailed token setup instructions, security best practices, and troubleshooting, see the
+[Token Setup Guide](./TOKEN_SETUP.md).**
+
 ## Custom Release Notes
 
 You can customize release notes using template variables:
@@ -308,6 +311,18 @@ jobs:
 4. **SHA256 Calculation:** Calculates the SHA256 hash of the tarball
 5. **Formula Update:** Updates the formula file with new version, URL, and SHA256
 6. **Commit & Push:** Commits changes to the tap repository
+
+## Future Enhancements
+
+Planned improvements for future versions:
+
+- **Token Setup Automation:** Automated token validation and setup wizard
+- **Formula Template Support:** Support for different Homebrew formula templates
+- **Multi-Platform Builds:** Support for different architectures and platforms
+- **Custom Commit Messages:** Configurable commit message templates
+- **Dry Run Mode:** Test mode that shows what would be changed without making changes
+- **Batch Updates:** Update multiple formulas in a single run
+- **Rollback Support:** Automatic rollback on failure
 
 ## Contributing
 
