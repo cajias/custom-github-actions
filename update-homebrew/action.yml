@@ -59,10 +59,10 @@ inputs:
 outputs:
   version:
     description: 'The version that was created'
-  
+
   release_url:
     description: 'URL of the created GitHub release'
-  
+
   formula_updated:
     description: 'Whether the formula was successfully updated'
 
