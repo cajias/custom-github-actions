@@ -204,9 +204,55 @@ Automatically assigns GitHub Copilot to ready subtasks, enabling parallel work o
 
 ---
 
+## 🍺 [Update Homebrew Formula](./update-homebrew/)
+
+Automatically update Homebrew formulas when your project is released.
+
+**Features:**
+
+- Multiple versioning strategies (date-based, semver, custom)
+- Automatic GitHub release creation
+- SHA256 calculation for release tarballs
+- Automatic formula file updates
+- Secure token handling
+
+**Minimal Usage:**
+
+```yaml
+- uses: cajias/custom-github-actions/update-homebrew@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    tap_repo_token: ${{ secrets.TAP_REPO_TOKEN }}
+    github_user: your-username
+    source_repo: your-project
+    tap_repo: homebrew-tools
+    formula_name: your-formula
+    formula_path: Formula/your-formula.rb
+```
+
+**With Semver Versioning:**
+
+```yaml
+- uses: cajias/custom-github-actions/update-homebrew@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    tap_repo_token: ${{ secrets.TAP_REPO_TOKEN }}
+    github_user: your-username
+    source_repo: your-project
+    tap_repo: homebrew-tools
+    formula_name: your-formula
+    formula_path: Formula/your-formula.rb
+    version_strategy: semver-tag
+```
+
+**Documentation:**
+
+- [Action README](./update-homebrew/README.md)
+
+---
+
 ## Coming Soon
 
-- **Homebrew Auto-Update Action** - Automatically update Homebrew formulas
 - **Release Notes Generator** - AI-powered release notes from PRs
 - **Code Review Assistant** - Automated code review suggestions
 
