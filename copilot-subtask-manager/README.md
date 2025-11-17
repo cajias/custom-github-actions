@@ -449,6 +449,15 @@ Contributions welcome! This action is part of the [Agentic Applications](https:/
 
 MIT
 
+## More Examples
+
+See [EXAMPLES.md](./EXAMPLES.md) for detailed scenarios including:
+- Simple parallel tasks (documentation updates)
+- Sequential dependencies (authentication system)
+- Parallel branches with convergence (profile management)
+- AI-powered dependency detection (payment gateway)
+- Edge case handling (circular deps, conflicts, failures)
+
 ## Related Actions
 
 - [AI Issue Triage](../ai-triage/) - AI-powered issue triage and labeling
