@@ -108,6 +108,37 @@ Next-generation AI triage using GitHub Models API with Model Context Protocol.
 - [POC Validation](./docs/ai-triage-mcp-poc.md)
 - [v1 vs v2 Comparison](./docs/ai-triage-comparison.md)
 
+### 🔄 [Copilot Subtask Manager](./.github/workflows/copilot-subtask-manager.yml)
+
+Automatically manages GitHub Copilot assignments for parallel subtask work.
+
+**Features:**
+- Auto-assigns Copilot to ready subtasks when assigned to parent issue
+- Tracks dependencies between subtasks
+- Automatically assigns next tasks when subtasks complete
+- Enables parallel work on independent subtasks
+- Posts progress updates on parent issues
+
+**Usage:**
+```yaml
+# No configuration needed - automatically active when:
+# 1. Copilot is assigned to a parent issue
+# 2. Parent issue has subtasks with parent:{number} labels
+# 3. Subtasks optionally define dependencies with "Depends on #123"
+```
+
+**Example:**
+```markdown
+# Parent Issue #100: Add User Authentication
+- #101: Create database schema (no deps) → Auto-assigned
+- #102: Backend API (depends on #101) → Assigned after #101 completes
+- #103: Frontend UI (no deps) → Auto-assigned
+- #104: Tests (depends on #102, #103) → Assigned after both complete
+```
+
+**Documentation:**
+- [Copilot Subtask Manager Guide](./docs/COPILOT_SUBTASK_MANAGER.md)
+
 ---
 
 ## Coming Soon
