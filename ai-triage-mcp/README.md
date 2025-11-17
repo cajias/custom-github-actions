@@ -219,6 +219,7 @@ When an issue is opened or edited, the action:
 5. **Creates subtasks** - If issue is complex enough
    - Creates separate issues with `subtask` label
    - Links to parent issue with `parent:X` label
+   - Inherits non-triage labels from parent (e.g., `automated-test`, `area:*`, `team:*`)
    - Updates parent issue body with tasklist (native sub-issues)
 6. **Posts comment** - Summary of triage analysis
 
@@ -272,6 +273,15 @@ This creates native GitHub sub-issue relationships that:
 - Auto-update checkboxes when subtasks close
 - Integrate with GitHub Projects v2
 - Enable better filtering and querying
+
+**Label Inheritance:**
+
+Subtasks automatically inherit non-triage labels from their parent issue:
+
+- ✅ Inherited: `automated-test`, `area:*`, `team:*`, `sprint:*`, custom labels
+- ❌ Not inherited: `type:*`, `priority:*`, `complexity:*` (triage-specific)
+
+This ensures subtasks maintain organizational context while allowing each to receive its own triage classification if needed.
 
 ## Architecture
 
