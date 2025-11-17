@@ -217,10 +217,9 @@ When an issue is opened or edited, the action:
 3. **Validates response** - Ensures proper JSON structure and required fields
 4. **Applies labels** - Based on AI analysis (type, priority, scope)
 5. **Creates subtasks** - If issue is complex enough
-   - Creates separate issues with `subtask` label
-   - Links to parent issue with `parent:X` label
+   - Creates separate issues as native GitHub sub-issues
    - Inherits non-triage labels from parent (e.g., `automated-test`, `area:*`, `team:*`)
-   - Updates parent issue body with tasklist (native sub-issues)
+   - Updates parent issue body with tasklist (creates native sub-issue relationship)
 6. **Posts comment** - Summary of triage analysis
 
 ### Example Output
