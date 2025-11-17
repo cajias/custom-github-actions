@@ -34,26 +34,27 @@ jobs:
 
 ## Step 2: Create a Parent Issue (1 minute)
 
-Create a new issue with subtasks in tasklist format:
+Create a new parent issue (let's say it becomes #100):
 
 ```markdown
 ## Feature: User Authentication
 
 Implement user authentication system with the following components:
-
-## Subtasks
-- [ ] #101 Database schema for users
-- [ ] #102 Backend authentication API
-- [ ] #103 Frontend login UI
-- [ ] #104 Integration tests
+- Database schema
+- Backend API
+- Frontend UI
+- Integration tests
 ```
 
-## Step 3: Create Subtask Issues (1 minute)
+## Step 3: Create Subtask Issues (2 minutes)
 
-Create each subtask as a separate issue:
+Create each subtask as a separate issue with the `parent:100` label:
 
 **Issue #101: Database schema for users**
 ```markdown
+Title: Database schema for users
+Labels: parent:100
+
 Create the database schema for the user authentication system.
 
 Tables needed:
@@ -63,6 +64,9 @@ Tables needed:
 
 **Issue #102: Backend authentication API**
 ```markdown
+Title: Backend authentication API
+Labels: parent:100
+
 Implement REST API endpoints for authentication.
 
 Endpoints:
@@ -72,11 +76,14 @@ Endpoints:
 - GET /auth/me
 
 **Dependencies:**
-- Depends on #101
+Depends on #101
 ```
 
 **Issue #103: Frontend login UI**
 ```markdown
+Title: Frontend login UI
+Labels: parent:100
+
 Create React components for login and registration.
 
 Components:
@@ -87,11 +94,13 @@ Components:
 
 **Issue #104: Integration tests**
 ```markdown
+Title: Integration tests
+Labels: parent:100
+
 Write end-to-end tests for authentication workflows.
 
 **Dependencies:**
-- Depends on #102
-- Depends on #103
+Requires #102, #103
 ```
 
 ## Step 4: Assign Copilot to Parent (30 seconds)
@@ -142,59 +151,15 @@ When #102's PR is merged:
 - Assign Copilot to parent (30 sec)
 - Everything else happens automatically! ✨
 
-## Optional: Enable AI-Powered Dependency Analysis
-
-For automatic dependency detection without manual labeling:
-
-### 1. Create a Personal Access Token
-
-1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-2. Click "Generate new token (classic)"
-3. Name: `COPILOT_MANAGER_PAT`
-4. Scopes: Select `repo` (full control)
-5. Click "Generate token" and **copy the token**
-
-### 2. Add as Repository Secret
-
-1. Go to your repository → Settings → Secrets and variables → Actions
-2. Click "New repository secret"
-3. Name: `COPILOT_MANAGER_PAT`
-4. Value: Paste your PAT
-5. Click "Add secret"
-
-### 3. Update Workflow
-
-Update your workflow file to enable AI analysis:
-
-```yaml
-- name: Manage Copilot Subtasks
-  uses: cajias/custom-github-actions/copilot-subtask-manager@main
-  with:
-    token: ${{ secrets.GITHUB_TOKEN }}
-    enable-ai-analysis: true
-    ai-token: ${{ secrets.COPILOT_MANAGER_PAT }}
-```
-
-Also add `models: read` permission:
-
-```yaml
-permissions:
-  contents: read
-  issues: write
-  pull-requests: read
-  models: read  # Required for AI analysis
-```
-
-Now the AI will automatically detect dependencies from subtask descriptions!
 
 ## Tips for Success
 
 ### ✅ Do's
 
-- **Use clear tasklist format** in parent issues
+- **Add `parent:{number}` label** to all subtasks
 - **Create all subtasks first** before assigning Copilot
-- **Add "Parent Issue: #123"** to subtask descriptions
-- **Use "Closes #123"** in PR descriptions
+- **Specify dependencies clearly** using "Depends on #123" or "Requires #123" in subtask bodies
+- **Use "Closes #123"** in PR descriptions to link PRs to subtasks
 - **Keep dependencies simple** when possible
 
 ### ❌ Don'ts
@@ -212,17 +177,10 @@ Now the AI will automatically detect dependencies from subtask descriptions!
 
 ### No subtasks were assigned?
 
-**Check**: 
-- Parent issue has tasklist format `- [ ] #123`
+**Check**:
+- Subtasks have `parent:{number}` label matching the parent issue number
 - Subtasks exist and are open
 - Subtasks don't all have dependencies
-
-### AI analysis not working?
-
-**Check**:
-- `enable-ai-analysis: true` is set
-- `ai-token` secret is configured
-- `models: read` permission is added
 
 ## Next Steps
 
