@@ -2,6 +2,8 @@
 
 Automatically assigns GitHub Copilot to ready subtasks, enabling parallel work on complex parent issues with intelligent dependency management.
 
+> **🚀 Quick Start:** New to this action? See [QUICKSTART.md](./QUICKSTART.md) for a 5-minute setup guide.
+
 ## Overview
 
 When working on complex features, you often need to break them down into multiple subtasks. This action automates the process of assigning GitHub Copilot to subtasks that are ready to work on, respecting dependencies between tasks.
