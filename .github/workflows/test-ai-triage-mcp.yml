@@ -223,25 +223,23 @@ jobs:
         run: |
           issue_number="${{ steps.create-issue.outputs.issue_number }}"
 
-          # Search for subtask issues with parent label
-          subtasks=$(gh issue list --label "parent:${issue_number}" --json number --jq '.[].number')
+          # Get parent issue body and extract subtask numbers from tasklist
+          body=$(gh issue view "$issue_number" --json body --jq '.body')
+
+          # Extract issue numbers from tasklist (format: - [ ] #123)
+          subtasks=$(echo "$body" | grep -oP '(?<=- \[ \] #)\d+' | tr '\n' ' ')
 
           if [ -z "$subtasks" ]; then
-            echo "⚠️  No subtask issues found with parent:${issue_number} label"
+            echo "⚠️  No subtask issues found in parent issue tasklist"
             echo "This is acceptable - AI may have decided issue doesn't need subtasks"
             exit 0
           fi
 
           echo "✅ Found subtask issues: $subtasks"
 
-          # Verify subtasks have proper labels
+          # Verify subtasks have proper labels (inherited from parent)
           for subtask in $subtasks; do
             labels=$(gh issue view "$subtask" --json labels --jq '.labels[].name')
-
-            if ! echo "$labels" | grep -q "subtask"; then
-              echo "❌ Subtask #$subtask missing 'subtask' label"
-              exit 1
-            fi
 
             if ! echo "$labels" | grep -q "automated-test"; then
               echo "❌ Subtask #$subtask missing 'automated-test' label"
