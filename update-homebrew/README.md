@@ -1,6 +1,7 @@
 # Update Homebrew Formula Action
 
-Automatically update Homebrew formulas when your project is released. This action creates GitHub releases and updates your Homebrew tap repository with the new version, URL, and SHA256 hash.
+Automatically update Homebrew formulas when your project is released. This action creates GitHub releases and updates
+your Homebrew tap repository with the new version, URL, and SHA256 hash.
 
 ## Features
 
@@ -175,6 +176,7 @@ The action will automatically update the `url`, `sha256`, and `version` fields.
 ### GitHub Token
 
 The `github_token` input uses the default `${{ github.token }}` which has permissions to:
+
 - Create releases
 - Create tags
 - Read repository content
@@ -182,6 +184,7 @@ The `github_token` input uses the default `${{ github.token }}` which has permis
 ### Tap Repository Token
 
 The `tap_repo_token` requires a Personal Access Token (PAT) with:
+
 - `repo` scope (full control of private repositories)
 - Write access to the tap repository
 
@@ -210,6 +213,7 @@ custom_release_notes: |
 ```
 
 Available template variables:
+
 - `${version}` - The version number (e.g., `1.0.0`)
 - `${tag}` - The git tag (e.g., `v1.0.0`)
 - `${commitSha}` - The full commit SHA
@@ -253,6 +257,7 @@ jobs:
 **Error:** `Formula file not found: Formula/my-formula.rb`
 
 **Solution:** Verify that:
+
 1. The formula file exists in your tap repository
 2. The `formula_path` input is correct
 3. The `tap_repo_token` has access to the tap repository
@@ -262,6 +267,7 @@ jobs:
 **Error:** `Release v1.0.0 already exists`
 
 **Solution:** Either:
+
 1. Set `skip_if_exists: true` to skip duplicate releases
 2. Use a different `version_strategy`
 3. Manually delete the existing release if it was created in error
@@ -271,6 +277,7 @@ jobs:
 **Error:** `Failed to calculate SHA256`
 
 **Solution:** Ensure:
+
 1. The release was created successfully
 2. The `github_token` has permission to download release assets
 3. The tarball URL is accessible
@@ -280,6 +287,7 @@ jobs:
 **Error:** `Failed to update formula`
 
 **Solution:** Check that:
+
 1. The `tap_repo_token` has write access to the tap repository
 2. The formula file follows the expected format
 3. The formula file is on the `main` branch
