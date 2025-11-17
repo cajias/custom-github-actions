@@ -113,6 +113,7 @@ Next-generation AI triage using GitHub Models API with Model Context Protocol.
 Automatically manages GitHub Copilot assignments for parallel subtask work.
 
 **Features:**
+
 - Auto-assigns Copilot to ready subtasks when assigned to parent issue
 - Tracks dependencies between subtasks automatically
 - Automatically assigns next tasks when subtasks complete
@@ -121,6 +122,7 @@ Automatically manages GitHub Copilot assignments for parallel subtask work.
 - Posts progress updates on parent issues
 
 **Usage:**
+
 ```yaml
 name: Copilot Subtask Manager
 
@@ -140,12 +142,14 @@ jobs:
 ```
 
 **How it works:**
+
 1. Create subtasks with `parent:{number}` label
 2. Define dependencies: "Depends on #123" in subtask body
 3. Assign Copilot to parent issue
 4. Action automatically assigns Copilot to ready subtasks
 
 **Example:**
+
 ```markdown
 # Parent Issue #100: Add User Authentication
 ├─ #101: Database schema (no deps) → Auto-assigned immediately
@@ -155,8 +159,48 @@ jobs:
 ```
 
 **Documentation:**
+
 - [Action README](./copilot-subtask-manager/README.md)
 - [Copilot Subtask Manager Guide](./docs/COPILOT_SUBTASK_MANAGER.md)
+
+---
+
+## 🤖 [Copilot Subtask Manager](./copilot-subtask-manager/)
+
+Automatically assigns GitHub Copilot to ready subtasks, enabling parallel work on complex parent issues.
+
+**Features:**
+
+- Automatically assigns Copilot to subtasks with no dependencies
+- Detects dependencies from labels or issue descriptions
+- AI-powered dependency analysis (optional)
+- Auto-assigns newly unblocked subtasks as work completes
+- Progress tracking with status comments on parent issues
+- Handles edge cases (circular deps, conflicts, failures)
+
+**Minimal Usage:**
+
+```yaml
+- uses: cajias/custom-github-actions/copilot-subtask-manager@main
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**With AI-Powered Dependency Analysis:**
+
+```yaml
+- uses: cajias/custom-github-actions/copilot-subtask-manager@main
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    enable-ai-analysis: true
+    ai-token: ${{ secrets.COPILOT_MANAGER_PAT }}
+```
+
+**Documentation:**
+
+- [Action README](./copilot-subtask-manager/README.md)
+- [Usage Examples](./copilot-subtask-manager/README.md#usage-example)
+- [Dependency Specification](./copilot-subtask-manager/README.md#dependency-specification)
 
 ---
 

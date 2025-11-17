@@ -4,7 +4,8 @@ Automatically manage GitHub Copilot assignments for parallel subtask work.
 
 ## Features
 
-- ✅ **Auto-assign to ready subtasks** - When Copilot is assigned to a parent issue, automatically assigns to all subtasks with no dependencies
+- ✅ **Auto-assign to ready subtasks** - When Copilot is assigned to a parent issue, automatically
+  assigns to all subtasks with no dependencies
 - ✅ **Dependency tracking** - Parses dependencies from issue bodies and labels
 - ✅ **Automatic progression** - When subtasks complete, automatically assigns next ready subtasks
 - ✅ **Parallel execution** - Multiple independent subtasks can be worked on simultaneously
@@ -43,6 +44,7 @@ jobs:
 ### 2. Create issues with subtasks
 
 **Parent Issue #100:**
+
 ```markdown
 # Add User Authentication
 
@@ -52,6 +54,7 @@ Implement complete user authentication system.
 **Subtask Issues:**
 
 **Issue #101:**
+
 ```markdown
 Title: Create database schema for users
 Labels: parent:100
@@ -60,6 +63,7 @@ Create tables for users, sessions, and permissions.
 ```
 
 **Issue #102:**
+
 ```markdown
 Title: Implement backend auth API
 Labels: parent:100
@@ -70,6 +74,7 @@ Create REST API endpoints for login, logout, and token refresh.
 ```
 
 **Issue #103:**
+
 ```markdown
 Title: Create frontend login UI
 Labels: parent:100
@@ -78,6 +83,7 @@ Build login form and authentication flow in React.
 ```
 
 **Issue #104:**
+
 ```markdown
 Title: Add integration tests
 Labels: parent:100
@@ -90,6 +96,7 @@ Write e2e tests for full authentication flow.
 ### 3. Assign Copilot to parent issue
 
 Simply assign Copilot to issue #100. The action will:
+
 1. Find all subtasks with `parent:100` label
 2. Analyze dependencies
 3. Auto-assign Copilot to #101 and #103 (no dependencies)
@@ -98,6 +105,7 @@ Simply assign Copilot to issue #100. The action will:
 ### 4. Subtasks complete automatically
 
 When #101 PR is merged:
+
 - Action detects completion
 - Checks parent #100 for newly unblocked tasks
 - Finds #102 is now ready
@@ -105,15 +113,15 @@ When #101 PR is merged:
 
 ## Inputs
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `token` | GitHub token for API access | Yes | `${{ github.token }}` |
+| Input   | Description                 | Required | Default               |
+| ------- | --------------------------- | -------- | --------------------- |
+| `token` | GitHub token for API access | Yes      | `${{ github.token }}` |
 
 ## How It Works
 
 ### Event: Copilot Assigned to Parent
 
-```
+```text
 User assigns Copilot to parent #100
     ↓
 Find subtasks with parent:100 label
@@ -129,7 +137,7 @@ Post status comment on #100
 
 ### Event: Subtask PR Merged
 
-```
+```text
 Subtask #101 PR merged
     ↓
 Identify parent issue #100
@@ -159,7 +167,7 @@ Blocked by #128
 
 ### In Labels
 
-```
+```text
 depends-on:#123
 ```
 
@@ -168,25 +176,30 @@ depends-on:#123
 **Timeline for Issue #100:**
 
 **T0**: User assigns Copilot to #100
+
 - Action assigns Copilot to #101 (database) and #103 (frontend)
 - Copilot creates 2 PRs in parallel
 
 **T1**: #101 PR merged ✓
+
 - Action checks dependencies
 - #102 is now ready (depends on #101 ✓)
 - Action assigns Copilot to #102
 - Copilot creates PR for backend API
 
 **T2**: #103 PR merged ✓
+
 - #104 still blocked (needs #102)
 - No new assignments yet
 
 **T3**: #102 PR merged ✓
+
 - #104 is now ready (depends on #102 ✓ and #103 ✓)
 - Action assigns Copilot to #104
 - Copilot creates PR for integration tests
 
 **T4**: #104 PR merged ✓
+
 - All subtasks complete ✅
 - Feature #100 is done!
 
@@ -196,7 +209,7 @@ depends-on:#123
 
 The action detects circular dependencies and prevents assignments:
 
-```
+```text
 #101 depends on #102
 #102 depends on #103
 #103 depends on #101  ❌ Circular!
@@ -207,14 +220,17 @@ If detected, action posts error comment and fails.
 ### Handling Edge Cases
 
 **Already Assigned Subtasks:**
+
 - Skipped automatically
 - Only unassigned, ready subtasks are auto-assigned
 
 **Missing Dependencies:**
+
 - Treated as unresolved
 - Subtask remains blocked
 
 **Multiple Dependencies:**
+
 - ALL must be resolved before subtask becomes ready
 - Supports complex dependency graphs
 
@@ -228,6 +244,7 @@ npm run all
 ```
 
 This will:
+
 1. Format code with Prettier
 2. Lint with ESLint
 3. Compile TypeScript
@@ -243,7 +260,7 @@ act issues -e test-event.json
 
 ### Project Structure
 
-```
+```text
 copilot-subtask-manager/
 ├── src/
 │   ├── main.ts                  # Main entry point
@@ -262,6 +279,7 @@ copilot-subtask-manager/
 ### Copilot not auto-assigned to subtasks
 
 **Check:**
+
 1. Parent issue has subtasks with `parent:{number}` label
 2. Subtasks are in `open` state
 3. Subtasks don't have unresolved dependencies
@@ -270,6 +288,7 @@ copilot-subtask-manager/
 ### Dependencies not recognized
 
 **Check:**
+
 1. Dependency syntax matches supported patterns
 2. Issue numbers are correct
 3. Labels are formatted as `depends-on:#123`
@@ -277,6 +296,7 @@ copilot-subtask-manager/
 ### Workflow not triggering
 
 **Check:**
+
 1. Workflow file is in `.github/workflows/`
 2. File is valid YAML
 3. Permissions are configured correctly

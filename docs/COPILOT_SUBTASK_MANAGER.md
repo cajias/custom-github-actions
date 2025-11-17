@@ -4,7 +4,8 @@ Automatically manages GitHub Copilot assignments for parallel subtask work.
 
 ## Overview
 
-The Copilot Subtask Manager is a GitHub Actions workflow that enables intelligent, automated subtask management when working with GitHub Copilot on complex issues. It automatically:
+The Copilot Subtask Manager is a GitHub Actions workflow that enables intelligent, automated subtask
+management when working with GitHub Copilot on complex issues. It automatically:
 
 1. **Assigns Copilot to ready subtasks** when assigned to a parent issue
 2. **Tracks dependencies** between subtasks
@@ -100,6 +101,7 @@ Subtasks:
 **Creating Subtask Issues:**
 
 **Issue #101:**
+
 ```markdown
 Title: Create database schema for users
 Labels: parent:100
@@ -108,6 +110,7 @@ Create tables for users, sessions, and permissions.
 ```
 
 **Issue #102:**
+
 ```markdown
 Title: Implement backend auth API
 Labels: parent:100
@@ -121,6 +124,7 @@ Create REST API endpoints for:
 ```
 
 **Issue #103:**
+
 ```markdown
 Title: Create frontend login UI
 Labels: parent:100
@@ -129,6 +133,7 @@ Build login form and authentication flow in React.
 ```
 
 **Issue #104:**
+
 ```markdown
 Title: Add integration tests
 Labels: parent:100
@@ -190,7 +195,7 @@ requires: #126, #127
 
 ### In Labels
 
-```
+```text
 depends-on:#123
 ```
 
@@ -206,6 +211,7 @@ depends-on:#123
 ### Parallel Work
 
 The workflow enables maximum parallelization:
+
 - Multiple Copilot assignments create separate PRs
 - Independent subtasks can be worked on simultaneously
 - Reduces overall feature completion time
@@ -213,6 +219,7 @@ The workflow enables maximum parallelization:
 ### Automatic Progression
 
 No manual tracking needed:
+
 - Subtasks automatically assigned as dependencies complete
 - Progress updates posted to parent issue
 - Clear visibility into what's done and what's next
@@ -227,6 +234,7 @@ No manual tracking needed:
 ### Status Comments
 
 The workflow posts helpful comments:
+
 - Lists which subtasks were assigned
 - Shows blocked subtasks and their dependencies
 - Provides progress updates as work completes
@@ -237,30 +245,35 @@ The workflow posts helpful comments:
 ### No Subtasks
 
 If parent issue has no subtasks:
+
 - Posts comment explaining Copilot will work on parent directly
 - No subtask assignments made
 
 ### All Subtasks Blocked
 
 If all subtasks have unresolved dependencies:
+
 - Lists blocked subtasks and what they're waiting for
 - No assignments made until dependencies resolve
 
 ### Already Assigned Subtasks
 
 If a subtask already has an assignee:
+
 - Skips that subtask
 - Only assigns to unassigned, ready subtasks
 
 ### Circular Dependencies
 
 If circular dependencies exist:
+
 - No subtasks will ever become "ready"
 - Manual intervention required to break the cycle
 
 ### Missing Dependencies
 
 If a subtask depends on a non-existent issue:
+
 - Treated as unresolved dependency
 - Subtask remains blocked
 
@@ -269,6 +282,7 @@ If a subtask depends on a non-existent issue:
 ### Copilot not auto-assigned to subtasks
 
 **Check:**
+
 1. Parent issue has subtasks with `parent:{number}` label
 2. Subtasks are in `open` state
 3. Subtasks don't have unresolved dependencies
@@ -277,6 +291,7 @@ If a subtask depends on a non-existent issue:
 ### Dependencies not recognized
 
 **Check:**
+
 1. Dependency syntax matches supported patterns
 2. Issue numbers are correct
 3. Labels are formatted as `depends-on:#123`
@@ -284,6 +299,7 @@ If a subtask depends on a non-existent issue:
 ### Workflow not triggering
 
 **Check:**
+
 1. Workflow file is in `.github/workflows/`
 2. File is valid YAML
 3. Permissions are configured
@@ -309,20 +325,23 @@ This task needs the following completed first:
 ### Sequential vs Parallel Tasks
 
 **Parallel (no dependencies):**
-```
+
+```text
 Task A (no deps) ──┐
 Task B (no deps) ──┼──> All assigned simultaneously
 Task C (no deps) ──┘
 ```
 
 **Sequential (dependencies):**
-```
+
+```text
 Task A ───> Task B ───> Task C
 (no deps)  (needs A)  (needs B)
 ```
 
 **Mixed (partial dependencies):**
-```
+
+```text
 Task A (no deps) ────┐
 Task B (no deps) ────┼──> Assigned together
                      │
