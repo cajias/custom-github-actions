@@ -1,0 +1,69 @@
+name: 'Homebrew Auto-Update'
+description: 'Automatically update Homebrew formulas when a project is released'
+author: 'cajias'
+
+branding:
+  icon: 'package'
+  color: 'orange'
+
+inputs:
+  github_token:
+    description: 'GitHub token with permissions for creating releases and tags'
+    required: true
+    default: ${{ github.token }}
+
+  tap_repo_token:
+    description: 'GitHub token with write access to the Homebrew tap repository'
+    required: true
+
+  github_user:
+    description: 'GitHub username or organization that owns the repositories'
+    required: true
+
+  source_repo:
+    description: 'Name of the repository containing the source code'
+    required: true
+
+  tap_repo:
+    description: 'Name of the repository containing the Homebrew tap'
+    required: true
+
+  formula_name:
+    description: 'Name of the formula (without .rb extension)'
+    required: true
+
+  formula_path:
+    description: 'Path to the formula file within the tap repository (e.g., Formula/my-formula.rb)'
+    required: true
+
+  version_strategy:
+    description: 'Version generation strategy: date-commit, semver, or custom'
+    required: false
+    default: 'date-commit'
+
+  custom_version:
+    description: 'Custom version string (required when version_strategy is "custom")'
+    required: false
+    default: ''
+
+  release_notes_template:
+    description: 'Template for release notes. Use {VERSION}, {COMMIT_HASH}, {COMMIT_SHA} as placeholders'
+    required: false
+    default: ''
+
+outputs:
+  version:
+    description: 'The generated version string'
+
+  tag:
+    description: 'The git tag created for this release'
+
+  release_url:
+    description: 'URL of the created GitHub release'
+
+  formula_path:
+    description: 'Full path to the updated formula file'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
