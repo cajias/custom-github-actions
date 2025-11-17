@@ -6,12 +6,25 @@ import { Subtask } from "./types";
 /**
  * Find all subtasks for a given parent issue
  */
-export declare function findSubtasks(octokit: ReturnType<typeof github.getOctokit>, owner: string, repo: string, parentNumber: number): Promise<Subtask[]>;
+export declare function findSubtasks(
+  octokit: ReturnType<typeof github.getOctokit>,
+  owner: string,
+  repo: string,
+  parentNumber: number,
+): Promise<Subtask[]>;
 /**
  * Parse dependency information from issue body and labels
  */
-export declare function parseDependencies(body: string, labels: string[]): number[];
+export declare function parseDependencies(
+  body: string,
+  labels: string[],
+): number[];
 /**
  * Check if an issue is closed
  */
-export declare function isIssueClosed(octokit: ReturnType<typeof github.getOctokit>, owner: string, repo: string, issueNumber: number): Promise<boolean>;
+export declare function isIssueClosed(
+  octokit: ReturnType<typeof github.getOctokit>,
+  owner: string,
+  repo: string,
+  issueNumber: number,
+): Promise<boolean>;
