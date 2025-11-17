@@ -14,6 +14,7 @@ import * as github from "@actions/github";
 import { analyzeIssue } from "./analyze";
 import { processTriageAnalysis } from "./process-triage";
 import { updateProjectFields } from "./update-project";
+import { fetchExistingSubtasks } from "./subtasks";
 import { ActionContext, ProjectConfig } from "./types";
 
 /**
@@ -94,6 +95,12 @@ async function run(): Promise<void> {
       repo,
     };
 
+    // Fetch existing subtasks
+    const existingSubtasks = await fetchExistingSubtasks(ctx);
+    if (existingSubtasks.length > 0) {
+      core.info(`Found ${existingSubtasks.length} existing subtasks`);
+    }
+
     // Analyze issue with AI
     const analysis = await analyzeIssue(
       ctx,
@@ -101,6 +108,7 @@ async function run(): Promise<void> {
       anthropicKey,
       openaiKey,
       token,
+      existingSubtasks,
     );
     core.info("AI analysis complete");
     core.debug(`Analysis: ${JSON.stringify(analysis, null, 2)}`);

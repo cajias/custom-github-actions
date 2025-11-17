@@ -10,6 +10,8 @@ AI-powered GitHub issue triage using multiple AI providers. This action automati
 - **Enhances descriptions** to make them agent-ready
 - **Asks clarifying questions** when details are missing
 - **Updates project board fields** automatically
+- **Evaluates and creates subtasks** for complex issues
+- **Provides feedback on existing subtasks**
 
 ## Features
 
@@ -20,6 +22,8 @@ AI-powered GitHub issue triage using multiple AI providers. This action automati
 - ✅ **Smart analysis** determines if issues are ready for AI agents
 - ✅ **Automatic enhancement** of issue descriptions
 - ✅ **Clarifying questions** posted as comments when needed
+- ✅ **Subtask management** - Automatically creates and evaluates subtasks for complex issues
+- ✅ **Subtask feedback** - Provides individual and overall feedback on existing subtasks
 
 ## Model Providers
 
@@ -258,6 +262,7 @@ Quick setup:
 2. Adds `status:ready-for-review` label
 3. Posts summary comment with priority, size, and reasoning
 4. Updates project board fields (if configured)
+5. Evaluates if subtasks are needed and creates them
 
 ### If Issue Needs Clarification ❓
 
@@ -265,6 +270,17 @@ Quick setup:
 2. **Posts clarifying questions** as a comment
 3. **OR enhances the description** if possible
 4. Sets project status to "Backlog"
+
+### Subtask Management 🔍
+The action intelligently handles subtasks:
+
+- **Creates subtasks** for complex issues (M, L, XL size)
+- **Simple tasks** (XS, S) won't have subtasks created
+- **Evaluates existing subtasks** and provides feedback
+- **Parent tasks** remain generic with acceptance criteria
+- **Subtasks** are specific with detailed implementation steps
+- **Dependencies** between subtasks are tracked via "blocked by" relationships
+- **Feedback** is posted both individually on each subtask and as an overall assessment on the parent issue
 
 ## Development
 
@@ -299,7 +315,9 @@ ai-triage/
 │   ├── types.ts             # TypeScript type definitions
 │   ├── analyze.ts           # AI inference and prompting
 │   ├── process-triage.ts    # Issue processing logic
-│   └── update-project.ts    # Project board updates
+│   ├── update-project.ts    # Project board updates
+│   ├── subtasks.ts          # Subtask creation and feedback
+│   └── model-providers.ts   # Multi-provider AI support
 ├── dist/
 │   └── index.js             # Compiled output (committed)
 ├── action.yml               # Action metadata

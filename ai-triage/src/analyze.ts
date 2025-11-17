@@ -3,7 +3,7 @@
  */
 
 import * as core from "@actions/core";
-import { ActionContext, TriageAnalysis } from "./types";
+import { ActionContext, TriageAnalysis, ExistingSubtask } from "./types";
 import { getModelConfig, callModel } from "./model-providers";
 
 /**
@@ -15,6 +15,7 @@ export async function analyzeIssue(
   anthropicKey: string,
   openaiKey: string,
   githubToken: string,
+  existingSubtasks?: ExistingSubtask[],
 ): Promise<TriageAnalysis> {
   core.info(`Analyzing issue #${ctx.issueNumber} with ${model}...`);
 
@@ -24,7 +25,12 @@ export async function analyzeIssue(
   }
 
   const systemPrompt = buildSystemPrompt();
-  const userPrompt = buildUserPrompt(issue.title, issue.body || "", ctx);
+  const userPrompt = buildUserPrompt(
+    issue.title,
+    issue.body || "",
+    ctx,
+    existingSubtasks,
+  );
 
   // Get model configuration and validate API keys
   const config = getModelConfig(model, anthropicKey, openaiKey);
@@ -56,6 +62,7 @@ Analyze issues and determine:
 2. What labels, priority, and size are appropriate
 3. Whether clarifying questions are needed
 4. If the description should be enhanced
+5. Whether the task requires subtasks and evaluate existing subtasks
 
 Return a JSON object with this EXACT structure:
 {
@@ -67,7 +74,27 @@ Return a JSON object with this EXACT structure:
   "suggested_assignee": null,
   "clarifying_questions": ["question1", ...],
   "enhanced_description": "improved description or null",
-  "reasoning": "brief explanation"
+  "reasoning": "brief explanation",
+  "needs_subtasks": boolean,
+  "subtasks_to_create": [
+    {
+      "title": "string",
+      "body": "detailed description with acceptance criteria",
+      "blocked_by": [101, 102],
+      "labels": ["type:*", ...],
+      "priority": "P0" | "P1" | "P2",
+      "size": "XS" | "S" | "M" | "L" | "XL"
+    }
+  ],
+  "subtask_feedback": [
+    {
+      "issue_number": number,
+      "feedback": "detailed feedback on this subtask",
+      "is_ready": boolean,
+      "suggested_improvements": ["improvement1", ...]
+    }
+  ],
+  "overall_subtask_feedback": "assessment of all subtasks together or null"
 }
 
 Labeling guidelines:
@@ -99,6 +126,17 @@ Size guidelines:
 - L: 3-5 days (large features, architectural changes)
 - XL: 1+ weeks (major features, significant refactoring)
 
+SUBTASK GUIDELINES:
+- Create subtasks ONLY for complex tasks (M, L, XL size)
+- Simple tasks (XS, S) should NOT have subtasks
+- Parent task should be generic and describe acceptance criteria
+- Subtasks should be specific with proper detail level
+- Each subtask should answer all questions needed for successful completion
+- Subtasks should link to other subtasks they are blocked by (blocked_by field)
+- When subtasks exist, evaluate them individually and as a whole
+- Check if subtasks correctly track requirements and acceptance criteria of parent
+- Ensure subtasks provide proper ordering via blocked_by relationships
+
 Return ONLY valid JSON, no markdown formatting.`;
 }
 
@@ -109,16 +147,38 @@ function buildUserPrompt(
   title: string,
   body: string,
   ctx: ActionContext,
+  existingSubtasks?: ExistingSubtask[],
 ): string {
-  return `**Issue Title:** ${title}
+  let prompt = `**Issue Title:** ${title}
 
 **Issue Body:**
 ${body}
 
 **Repository:** ${ctx.owner}/${ctx.repo}
-**Issue Number:** ${ctx.issueNumber}
+**Issue Number:** ${ctx.issueNumber}`;
 
-Analyze this issue and provide triage information in JSON format.`;
+  // Include existing subtasks if present
+  if (existingSubtasks && existingSubtasks.length > 0) {
+    prompt += `\n\n**Existing Subtasks:**`;
+    const maxSubtasks = 10; // Limit number of subtasks to avoid token limits
+    const maxBodyLength = 500; // Truncate long bodies
+
+    for (const subtask of existingSubtasks.slice(0, maxSubtasks)) {
+      const truncatedBody =
+        subtask.body.length > maxBodyLength
+          ? `${subtask.body.substring(0, maxBodyLength)}...(truncated)`
+          : subtask.body;
+      prompt += `\n\n#${subtask.number} - ${subtask.title} [${subtask.state}]\n${truncatedBody}`;
+    }
+
+    if (existingSubtasks.length > maxSubtasks) {
+      prompt += `\n\n... and ${existingSubtasks.length - maxSubtasks} more subtasks`;
+    }
+  }
+
+  prompt += `\n\nAnalyze this issue and provide triage information in JSON format. Consider whether this task needs subtasks or if existing subtasks need feedback.`;
+
+  return prompt;
 }
 
 /**
@@ -157,6 +217,9 @@ function validateAnalysis(analysis: any): asserts analysis is TriageAnalysis {
     "related_issues",
     "clarifying_questions",
     "reasoning",
+    "needs_subtasks",
+    "subtasks_to_create",
+    "subtask_feedback",
   ];
 
   for (const field of requiredFields) {
@@ -192,5 +255,49 @@ function validateAnalysis(analysis: any): asserts analysis is TriageAnalysis {
 
   if (typeof analysis.reasoning !== "string") {
     throw new Error("reasoning must be a string");
+  }
+
+  if (typeof analysis.needs_subtasks !== "boolean") {
+    throw new Error("needs_subtasks must be a boolean");
+  }
+
+  if (!Array.isArray(analysis.subtasks_to_create)) {
+    throw new Error("subtasks_to_create must be an array");
+  }
+
+  if (!Array.isArray(analysis.subtask_feedback)) {
+    throw new Error("subtask_feedback must be an array");
+  }
+
+  // Validate subtask structure
+  for (const subtask of analysis.subtasks_to_create) {
+    if (
+      typeof subtask.title !== "string" ||
+      subtask.title.trim().length === 0 ||
+      typeof subtask.body !== "string" ||
+      subtask.body.trim().length === 0 ||
+      !Array.isArray(subtask.blocked_by) ||
+      !Array.isArray(subtask.labels) ||
+      !["P0", "P1", "P2"].includes(subtask.priority) ||
+      !["XS", "S", "M", "L", "XL"].includes(subtask.size)
+    ) {
+      throw new Error(
+        "Each subtask must have non-empty string title and body, blocked_by and labels as arrays, and valid priority (P0/P1/P2) and size (XS/S/M/L/XL)",
+      );
+    }
+  }
+
+  // Validate subtask feedback structure
+  for (const feedback of analysis.subtask_feedback) {
+    if (
+      typeof feedback.issue_number !== "number" ||
+      typeof feedback.feedback !== "string" ||
+      typeof feedback.is_ready !== "boolean" ||
+      !Array.isArray(feedback.suggested_improvements)
+    ) {
+      throw new Error(
+        "Each subtask feedback must have issue_number, feedback, is_ready, and suggested_improvements",
+      );
+    }
   }
 }
