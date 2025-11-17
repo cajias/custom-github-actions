@@ -108,35 +108,54 @@ Next-generation AI triage using GitHub Models API with Model Context Protocol.
 - [POC Validation](./docs/ai-triage-mcp-poc.md)
 - [v1 vs v2 Comparison](./docs/ai-triage-comparison.md)
 
-### 🔄 [Copilot Subtask Manager](./.github/workflows/copilot-subtask-manager.yml)
+### 🔄 [Copilot Subtask Manager](./copilot-subtask-manager/)
 
 Automatically manages GitHub Copilot assignments for parallel subtask work.
 
 **Features:**
 - Auto-assigns Copilot to ready subtasks when assigned to parent issue
-- Tracks dependencies between subtasks
+- Tracks dependencies between subtasks automatically
 - Automatically assigns next tasks when subtasks complete
 - Enables parallel work on independent subtasks
+- Detects circular dependencies
 - Posts progress updates on parent issues
 
 **Usage:**
 ```yaml
-# No configuration needed - automatically active when:
-# 1. Copilot is assigned to a parent issue
-# 2. Parent issue has subtasks with parent:{number} labels
-# 3. Subtasks optionally define dependencies with "Depends on #123"
+name: Copilot Subtask Manager
+
+on:
+  issues:
+    types: [assigned]
+  pull_request:
+    types: [closed]
+
+jobs:
+  manage-subtasks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: cajias/custom-github-actions/copilot-subtask-manager@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+**How it works:**
+1. Create subtasks with `parent:{number}` label
+2. Define dependencies: "Depends on #123" in subtask body
+3. Assign Copilot to parent issue
+4. Action automatically assigns Copilot to ready subtasks
 
 **Example:**
 ```markdown
 # Parent Issue #100: Add User Authentication
-- #101: Create database schema (no deps) → Auto-assigned
-- #102: Backend API (depends on #101) → Assigned after #101 completes
-- #103: Frontend UI (no deps) → Auto-assigned
-- #104: Tests (depends on #102, #103) → Assigned after both complete
+├─ #101: Database schema (no deps) → Auto-assigned immediately
+├─ #102: Backend API (depends on #101) → Assigned after #101 completes
+├─ #103: Frontend UI (no deps) → Auto-assigned immediately
+└─ #104: Tests (depends on #102, #103) → Assigned after both complete
 ```
 
 **Documentation:**
+- [Action README](./copilot-subtask-manager/README.md)
 - [Copilot Subtask Manager Guide](./docs/COPILOT_SUBTASK_MANAGER.md)
 
 ---

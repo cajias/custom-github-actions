@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+lib/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+coverage/
+
+# Misc
+.env
+.env.local

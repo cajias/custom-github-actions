@@ -1,0 +1,17 @@
+name: 'Copilot Subtask Manager'
+description: 'Automatically manage GitHub Copilot assignments for parallel subtask work'
+author: 'cajias'
+
+branding:
+  icon: 'git-branch'
+  color: 'blue'
+
+inputs:
+  token:
+    description: 'GitHub token for API access'
+    required: true
+    default: ${{ github.token }}
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
