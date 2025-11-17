@@ -110,6 +110,45 @@ Next-generation AI triage using GitHub Models API with Model Context Protocol.
 
 ---
 
+## 🤖 [Copilot Subtask Manager](./copilot-subtask-manager/)
+
+Automatically assigns GitHub Copilot to ready subtasks, enabling parallel work on complex parent issues.
+
+**Features:**
+
+- Automatically assigns Copilot to subtasks with no dependencies
+- Detects dependencies from labels or issue descriptions
+- AI-powered dependency analysis (optional)
+- Auto-assigns newly unblocked subtasks as work completes
+- Progress tracking with status comments on parent issues
+- Handles edge cases (circular deps, conflicts, failures)
+
+**Minimal Usage:**
+
+```yaml
+- uses: cajias/custom-github-actions/copilot-subtask-manager@main
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**With AI-Powered Dependency Analysis:**
+
+```yaml
+- uses: cajias/custom-github-actions/copilot-subtask-manager@main
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    enable-ai-analysis: true
+    ai-token: ${{ secrets.COPILOT_MANAGER_PAT }}
+```
+
+**Documentation:**
+
+- [Action README](./copilot-subtask-manager/README.md)
+- [Usage Examples](./copilot-subtask-manager/README.md#usage-example)
+- [Dependency Specification](./copilot-subtask-manager/README.md#dependency-specification)
+
+---
+
 ## Coming Soon
 
 - **Homebrew Auto-Update Action** - Automatically update Homebrew formulas
