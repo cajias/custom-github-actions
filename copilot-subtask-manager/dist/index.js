@@ -29922,13 +29922,13 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 2475:
+/***/ 3740:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
 /**
- * AI-powered issue analysis using multiple model providers
+ * Copilot assignment management
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -29964,242 +29964,294 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.analyzeIssue = analyzeIssue;
+exports.assignCopilotToSubtasks = assignCopilotToSubtasks;
+exports.postStatusComment = postStatusComment;
+exports.postProgressComment = postProgressComment;
 const core = __importStar(__nccwpck_require__(7484));
-const model_providers_1 = __nccwpck_require__(1585);
 /**
- * Analyze issue using AI model (supports multiple providers)
+ * Assign Copilot to multiple subtasks
  */
-async function analyzeIssue(ctx, model, anthropicKey, openaiKey, githubToken, existingSubtasks) {
-    core.info(`Analyzing issue #${ctx.issueNumber} with ${model}...`);
-    const issue = ctx.context.payload.issue;
-    if (!issue) {
-        throw new Error("Issue not found in context");
-    }
-    const systemPrompt = buildSystemPrompt();
-    const userPrompt = buildUserPrompt(issue.title, issue.body || "", ctx, existingSubtasks);
-    // Get model configuration and validate API keys
-    const config = (0, model_providers_1.getModelConfig)(model, anthropicKey, openaiKey);
-    // Call the appropriate AI provider
-    const response = await (0, model_providers_1.callModel)(config, systemPrompt, userPrompt, githubToken);
-    // Parse and validate response
-    const analysis = parseAIResponse(response);
-    core.info("✅ Issue analysis complete");
-    return analysis;
-}
-/**
- * Build the system prompt for the AI
- */
-function buildSystemPrompt() {
-    return `You are an expert GitHub issue triager for the PlanGEN project, a Python framework
-for solving complex problems using LLMs in a multi-agent approach.
-
-Analyze issues and determine:
-1. If the issue is specific and actionable enough for an AI agent to implement
-2. What labels, priority, and size are appropriate
-3. Whether clarifying questions are needed
-4. If the description should be enhanced
-5. Whether the task requires subtasks and evaluate existing subtasks
-
-Return a JSON object with this EXACT structure:
-{
-  "is_agent_ready": boolean,
-  "labels": ["type:*", "scope:*", ...],
-  "priority": "P0" | "P1" | "P2",
-  "size": "XS" | "S" | "M" | "L" | "XL",
-  "related_issues": [numbers],
-  "suggested_assignee": null,
-  "clarifying_questions": ["question1", ...],
-  "enhanced_description": "improved description or null",
-  "reasoning": "brief explanation",
-  "needs_subtasks": boolean,
-  "subtasks_to_create": [
-    {
-      "title": "string",
-      "body": "detailed description with acceptance criteria",
-      "blocked_by": [101, 102],
-      "labels": ["type:*", ...],
-      "priority": "P0" | "P1" | "P2",
-      "size": "XS" | "S" | "M" | "L" | "XL"
-    }
-  ],
-  "subtask_feedback": [
-    {
-      "issue_number": number,
-      "feedback": "detailed feedback on this subtask",
-      "is_ready": boolean,
-      "suggested_improvements": ["improvement1", ...]
-    }
-  ],
-  "overall_subtask_feedback": "assessment of all subtasks together or null"
-}
-
-Labeling guidelines:
-- type:bug - Something isn't working
-- type:feature - New feature or request
-- type:refactor - Code refactoring
-- type:chore - Maintenance tasks
-
-Scopes: api-design, infrastructure, documentation, visualization, testing,
-        performance, architecture, security, packaging
-
-An issue is "agent_ready" if it has:
-- Clear acceptance criteria
-- Specific technical details
-- Well-defined scope
-- No ambiguous requirements
-
-If NOT agent_ready, either provide enhanced_description OR clarifying_questions.
-
-Priority guidelines:
-- P0: Critical bugs, security issues, blocking issues
-- P1: Important features, significant bugs
-- P2: Nice-to-have features, minor improvements
-
-Size guidelines:
-- XS: < 1 hour (typo fixes, documentation updates)
-- S: 1-4 hours (small features, simple bug fixes)
-- M: 1-2 days (medium features, complex bug fixes)
-- L: 3-5 days (large features, architectural changes)
-- XL: 1+ weeks (major features, significant refactoring)
-
-SUBTASK GUIDELINES:
-- Create subtasks ONLY for complex tasks (M, L, XL size)
-- Simple tasks (XS, S) should NOT have subtasks
-- Parent task should be generic and describe acceptance criteria
-- Subtasks should be specific with proper detail level
-- Each subtask should answer all questions needed for successful completion
-- Subtasks should link to other subtasks they are blocked by (blocked_by field)
-- When subtasks exist, evaluate them individually and as a whole
-- Check if subtasks correctly track requirements and acceptance criteria of parent
-- Ensure subtasks provide proper ordering via blocked_by relationships
-
-Return ONLY valid JSON, no markdown formatting.`;
-}
-/**
- * Build the user prompt with issue details
- */
-function buildUserPrompt(title, body, ctx, existingSubtasks) {
-    let prompt = `**Issue Title:** ${title}
-
-**Issue Body:**
-${body}
-
-**Repository:** ${ctx.owner}/${ctx.repo}
-**Issue Number:** ${ctx.issueNumber}`;
-    // Include existing subtasks if present
-    if (existingSubtasks && existingSubtasks.length > 0) {
-        prompt += `\n\n**Existing Subtasks:**`;
-        const maxSubtasks = 10; // Limit number of subtasks to avoid token limits
-        const maxBodyLength = 500; // Truncate long bodies
-        for (const subtask of existingSubtasks.slice(0, maxSubtasks)) {
-            const truncatedBody = subtask.body.length > maxBodyLength
-                ? `${subtask.body.substring(0, maxBodyLength)}...(truncated)`
-                : subtask.body;
-            prompt += `\n\n#${subtask.number} - ${subtask.title} [${subtask.state}]\n${truncatedBody}`;
+async function assignCopilotToSubtasks(octokit, owner, repo, assignee, subtasks) {
+    const results = [];
+    for (const subtask of subtasks) {
+        try {
+            await octokit.rest.issues.addAssignees({
+                owner,
+                repo,
+                issue_number: subtask.number,
+                assignees: [assignee],
+            });
+            core.info(`✓ Assigned ${assignee} to subtask #${subtask.number}`);
+            results.push({ number: subtask.number, success: true });
         }
-        if (existingSubtasks.length > maxSubtasks) {
-            prompt += `\n\n... and ${existingSubtasks.length - maxSubtasks} more subtasks`;
+        catch (error) {
+            core.error(`✗ Failed to assign ${assignee} to subtask #${subtask.number}: ${error.message}`);
+            results.push({
+                number: subtask.number,
+                success: false,
+                error: error.message,
+            });
         }
     }
-    prompt += `\n\nAnalyze this issue and provide triage information in JSON format. Consider whether this task needs subtasks or if existing subtasks need feedback.`;
-    return prompt;
+    return results;
 }
 /**
- * Parse AI response and validate structure
+ * Post a status comment on the parent issue
  */
-function parseAIResponse(response) {
-    try {
-        // Remove markdown code blocks if present
-        const cleaned = response
-            .replace(/```json\n?/g, "")
-            .replace(/```\n?/g, "")
-            .trim();
-        const parsed = JSON.parse(cleaned);
-        // Validate required fields
-        validateAnalysis(parsed);
-        return parsed;
+async function postStatusComment(octokit, owner, repo, parentNumber, assignee, readySubtasks, allSubtasks) {
+    let comment = "🤖 **Copilot Subtask Manager**\n\n";
+    if (allSubtasks.length === 0) {
+        comment += `No subtasks found for this issue. ${assignee} will work on the parent issue directly.`;
     }
-    catch (error) {
-        core.error(`Failed to parse AI response: ${error}`);
-        core.error(`Raw response: ${response}`);
-        throw new Error("AI returned invalid JSON response");
+    else if (readySubtasks.length === 0) {
+        const blockedSubtasks = allSubtasks.filter((st) => !st.hasAssignees && st.unresolvedDependencies.length > 0);
+        const assignedSubtasks = allSubtasks.filter((st) => st.hasAssignees);
+        comment += `Found ${allSubtasks.length} subtask(s), but none are ready to assign:\n\n`;
+        if (assignedSubtasks.length > 0) {
+            comment += "**Already Assigned:**\n";
+            for (const st of assignedSubtasks) {
+                comment += `- [ ] #${st.number} - ${st.title}\n`;
+            }
+            comment += "\n";
+        }
+        if (blockedSubtasks.length > 0) {
+            comment += "**Blocked by Dependencies:**\n";
+            for (const st of blockedSubtasks) {
+                const deps = st.unresolvedDependencies.map((d) => `#${d}`).join(", ");
+                comment += `- [ ] #${st.number} - ${st.title} (depends on: ${deps})\n`;
+            }
+        }
     }
+    else {
+        comment += `${assignee} has been assigned to ${readySubtasks.length} ready subtask(s):\n\n`;
+        for (const subtask of readySubtasks) {
+            comment += `- [ ] #${subtask.number} - ${subtask.title}\n`;
+        }
+        const blockedSubtasks = allSubtasks.filter((st) => !readySubtasks.includes(st) &&
+            !st.hasAssignees &&
+            st.unresolvedDependencies.length > 0);
+        if (blockedSubtasks.length > 0) {
+            comment += "\n**Waiting for Dependencies:**\n";
+            for (const st of blockedSubtasks) {
+                const deps = st.unresolvedDependencies.map((d) => `#${d}`).join(", ");
+                comment += `- [ ] #${st.number} - ${st.title} (depends on: ${deps})\n`;
+            }
+            comment +=
+                "\n_These will be automatically assigned as dependencies are completed._";
+        }
+    }
+    await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: parentNumber,
+        body: comment,
+    });
 }
 /**
- * Validate that the analysis has all required fields
+ * Post progress comment when a subtask is completed
  */
-function validateAnalysis(analysis) {
-    const requiredFields = [
-        "is_agent_ready",
-        "labels",
-        "priority",
-        "size",
-        "related_issues",
-        "clarifying_questions",
-        "reasoning",
-        "needs_subtasks",
-        "subtasks_to_create",
-        "subtask_feedback",
-    ];
-    for (const field of requiredFields) {
-        if (!(field in analysis)) {
-            throw new Error(`Missing required field in AI response: ${field}`);
+async function postProgressComment(octokit, owner, repo, parentNumber, completedSubtaskNumber, newlyAssignedSubtasks, remainingSubtasks) {
+    let comment = "🤖 **Subtask Completed**\n\n";
+    comment += `Subtask #${completedSubtaskNumber} has been completed! ✅\n\n`;
+    if (newlyAssignedSubtasks.length > 0) {
+        comment += "**Newly Assigned Subtasks:**\n";
+        for (const st of newlyAssignedSubtasks) {
+            comment += `- [ ] #${st.number} - ${st.title}\n`;
         }
     }
-    // Validate types
-    if (typeof analysis.is_agent_ready !== "boolean") {
-        throw new Error("is_agent_ready must be a boolean");
+    else {
+        comment += "No additional subtasks are ready to assign at this time.\n";
     }
-    if (!Array.isArray(analysis.labels)) {
-        throw new Error("labels must be an array");
-    }
-    if (!["P0", "P1", "P2"].includes(analysis.priority)) {
-        throw new Error("priority must be P0, P1, or P2");
-    }
-    if (!["XS", "S", "M", "L", "XL"].includes(analysis.size)) {
-        throw new Error("size must be XS, S, M, L, or XL");
-    }
-    if (!Array.isArray(analysis.related_issues)) {
-        throw new Error("related_issues must be an array");
-    }
-    if (!Array.isArray(analysis.clarifying_questions)) {
-        throw new Error("clarifying_questions must be an array");
-    }
-    if (typeof analysis.reasoning !== "string") {
-        throw new Error("reasoning must be a string");
-    }
-    if (typeof analysis.needs_subtasks !== "boolean") {
-        throw new Error("needs_subtasks must be a boolean");
-    }
-    if (!Array.isArray(analysis.subtasks_to_create)) {
-        throw new Error("subtasks_to_create must be an array");
-    }
-    if (!Array.isArray(analysis.subtask_feedback)) {
-        throw new Error("subtask_feedback must be an array");
-    }
-    // Validate subtask structure
-    for (const subtask of analysis.subtasks_to_create) {
-        if (typeof subtask.title !== "string" ||
-            subtask.title.trim().length === 0 ||
-            typeof subtask.body !== "string" ||
-            subtask.body.trim().length === 0 ||
-            !Array.isArray(subtask.blocked_by) ||
-            !Array.isArray(subtask.labels) ||
-            !["P0", "P1", "P2"].includes(subtask.priority) ||
-            !["XS", "S", "M", "L", "XL"].includes(subtask.size)) {
-            throw new Error("Each subtask must have non-empty string title and body, blocked_by and labels as arrays, and valid priority (P0/P1/P2) and size (XS/S/M/L/XL)");
+    const stillBlocked = remainingSubtasks.filter((st) => !st.hasAssignees &&
+        !newlyAssignedSubtasks.includes(st) &&
+        st.unresolvedDependencies.length > 0);
+    if (stillBlocked.length > 0) {
+        comment += "\n**Still Waiting:**\n";
+        for (const st of stillBlocked) {
+            const deps = st.unresolvedDependencies.map((d) => `#${d}`).join(", ");
+            comment += `- [ ] #${st.number} - ${st.title} (depends on: ${deps})\n`;
         }
     }
-    // Validate subtask feedback structure
-    for (const feedback of analysis.subtask_feedback) {
-        if (typeof feedback.issue_number !== "number" ||
-            typeof feedback.feedback !== "string" ||
-            typeof feedback.is_ready !== "boolean" ||
-            !Array.isArray(feedback.suggested_improvements)) {
-            throw new Error("Each subtask feedback must have issue_number, feedback, is_ready, and suggested_improvements");
+    await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: parentNumber,
+        body: comment,
+    });
+}
+
+
+/***/ }),
+
+/***/ 8645:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Dependency resolution logic
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.analyzeSubtasks = analyzeSubtasks;
+exports.findNewlyReadySubtasks = findNewlyReadySubtasks;
+exports.detectCircularDependencies = detectCircularDependencies;
+const core = __importStar(__nccwpck_require__(7484));
+const subtask_discovery_1 = __nccwpck_require__(83);
+/**
+ * Analyze subtasks and determine which are ready to work on
+ */
+async function analyzeSubtasks(octokit, owner, repo, subtasks) {
+    const analyses = [];
+    for (const subtask of subtasks) {
+        const hasAssignees = subtask.assignees.length > 0;
+        // Skip if already assigned
+        if (hasAssignees) {
+            core.info(`Subtask #${subtask.number} already has assignees, skipping`);
+            analyses.push({
+                number: subtask.number,
+                title: subtask.title,
+                dependencies: subtask.dependencies,
+                hasAssignees,
+                state: subtask.state,
+                isReady: false,
+                unresolvedDependencies: subtask.dependencies,
+            });
+            continue;
+        }
+        // If no dependencies, it's ready
+        if (subtask.dependencies.length === 0) {
+            core.info(`Subtask #${subtask.number} has no dependencies, ready`);
+            analyses.push({
+                number: subtask.number,
+                title: subtask.title,
+                dependencies: [],
+                hasAssignees,
+                state: subtask.state,
+                isReady: true,
+                unresolvedDependencies: [],
+            });
+            continue;
+        }
+        // Check if all dependencies are resolved
+        const unresolvedDeps = [];
+        for (const depNum of subtask.dependencies) {
+            const isClosed = await (0, subtask_discovery_1.isIssueClosed)(octokit, owner, repo, depNum);
+            if (!isClosed) {
+                unresolvedDeps.push(depNum);
+            }
+        }
+        const isReady = unresolvedDeps.length === 0;
+        if (isReady) {
+            core.info(`Subtask #${subtask.number} has all dependencies resolved, ready`);
+        }
+        else {
+            core.info(`Subtask #${subtask.number} has ${unresolvedDeps.length} unresolved dependencies: ${unresolvedDeps.join(", ")}`);
+        }
+        analyses.push({
+            number: subtask.number,
+            title: subtask.title,
+            dependencies: subtask.dependencies,
+            hasAssignees,
+            state: subtask.state,
+            isReady,
+            unresolvedDependencies: unresolvedDeps,
+        });
+    }
+    return analyses;
+}
+/**
+ * Find subtasks that became ready after a specific subtask was completed
+ */
+function findNewlyReadySubtasks(completedSubtaskNumber, analyses) {
+    const newlyReady = [];
+    for (const analysis of analyses) {
+        // Skip if already assigned or already determined not ready
+        if (analysis.hasAssignees || !analysis.isReady) {
+            continue;
+        }
+        // Check if this subtask depended on the completed one
+        if (analysis.dependencies.includes(completedSubtaskNumber)) {
+            // This subtask just became unblocked
+            newlyReady.push(analysis);
         }
     }
+    return newlyReady;
+}
+/**
+ * Detect circular dependencies in subtasks
+ */
+function detectCircularDependencies(subtasks) {
+    const graph = new Map();
+    // Build dependency graph
+    for (const subtask of subtasks) {
+        graph.set(subtask.number, subtask.dependencies);
+    }
+    // Check for cycles using DFS
+    const visited = new Set();
+    const recursionStack = new Set();
+    function hasCycle(node, path) {
+        if (recursionStack.has(node)) {
+            // Found a cycle
+            const cycleStart = path.indexOf(node);
+            const cycle = path.slice(cycleStart).concat(node);
+            return `Circular dependency detected: ${cycle.map((n) => `#${n}`).join(" → ")}`;
+        }
+        if (visited.has(node)) {
+            return null;
+        }
+        visited.add(node);
+        recursionStack.add(node);
+        path.push(node);
+        const dependencies = graph.get(node) || [];
+        for (const dep of dependencies) {
+            const result = hasCycle(dep, [...path]);
+            if (result) {
+                return result;
+            }
+        }
+        recursionStack.delete(node);
+        return null;
+    }
+    for (const subtask of subtasks) {
+        const result = hasCycle(subtask.number, []);
+        if (result) {
+            return result;
+        }
+    }
+    return null;
 }
 
 
@@ -30211,14 +30263,12 @@ function validateAnalysis(analysis) {
 "use strict";
 
 /**
- * AI-powered GitHub issue triage action
+ * Copilot Subtask Manager
  *
- * This action uses GitHub Models to analyze issues and:
- * - Apply appropriate labels
- * - Set priority and size estimates
- * - Enhance descriptions to be agent-ready
- * - Ask clarifying questions when needed
- * - Update project board fields
+ * Automatically manages GitHub Copilot assignments for parallel subtask work:
+ * - Auto-assigns Copilot to ready subtasks when assigned to parent issue
+ * - Tracks dependencies between subtasks
+ * - Automatically assigns next tasks when subtasks complete
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -30256,125 +30306,185 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
-const analyze_1 = __nccwpck_require__(2475);
-const process_triage_1 = __nccwpck_require__(7983);
-const update_project_1 = __nccwpck_require__(3418);
-const subtasks_1 = __nccwpck_require__(1803);
+const subtask_discovery_1 = __nccwpck_require__(83);
+const dependency_resolver_1 = __nccwpck_require__(8645);
+const assignment_manager_1 = __nccwpck_require__(3740);
 /**
- * Check if the action should run based on default triggers
+ * Determine the event context and what action to take
  */
-function shouldRunTriage(context) {
-    const action = context.payload.action;
-    const issue = context.payload.issue;
-    // Trigger 1: Issue opened
-    if (action === "opened") {
-        core.info("✅ Trigger: Issue opened");
-        return true;
+function getEventContext(context) {
+    const eventName = context.eventName;
+    const action = context.payload.action || "";
+    // Check for Copilot assignment to an issue
+    if (eventName === "issues" && action === "assigned") {
+        const assignee = context.payload.assignee?.login || "";
+        const isCopilot = assignee === "copilot" || assignee.includes("copilot");
+        return {
+            eventName,
+            action,
+            isCopilotAssignment: isCopilot,
+            isSubtaskCompletion: false,
+            parentIssueNumber: isCopilot ? context.payload.issue?.number : undefined,
+        };
     }
-    // Trigger 2 & 3: Check for specific labels
-    if (action === "labeled" && issue?.labels) {
-        const labels = issue.labels.map((l) => l.name);
-        if (labels.includes("needs-triage")) {
-            core.info("✅ Trigger: needs-triage label added");
-            return true;
+    // Check for PR completion (merged)
+    if (eventName === "pull_request" && context.payload.pull_request?.merged) {
+        const prBody = context.payload.pull_request.body || "";
+        // Look for linked issues in PR body
+        const issueMatches = prBody.matchAll(/(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+#(\d+)/gi);
+        const linkedIssues = [];
+        for (const match of issueMatches) {
+            linkedIssues.push(parseInt(match[1]));
         }
-        if (labels.includes("triage:backlog")) {
-            core.info("✅ Trigger: triage:backlog label added");
-            return true;
-        }
+        return {
+            eventName,
+            action: "merged",
+            isCopilotAssignment: false,
+            isSubtaskCompletion: linkedIssues.length > 0,
+            completedSubtaskNumber: linkedIssues.length > 0 ? linkedIssues[0] : undefined,
+        };
     }
-    return false;
+    return {
+        eventName,
+        action,
+        isCopilotAssignment: false,
+        isSubtaskCompletion: false,
+    };
 }
 /**
- * Main action entry point
+ * Check if an issue has a parent label
+ */
+async function getParentIssueNumber(octokit, owner, repo, issueNumber) {
+    const { data: issue } = await octokit.rest.issues.get({
+        owner,
+        repo,
+        issue_number: issueNumber,
+    });
+    const parentLabel = issue.labels.find((label) => typeof label === "object" &&
+        label.name &&
+        label.name.startsWith("parent:"));
+    if (parentLabel && typeof parentLabel === "object" && parentLabel.name) {
+        const parentNum = parseInt(parentLabel.name.split(":")[1]);
+        return parentNum;
+    }
+    return null;
+}
+/**
+ * Handle Copilot being assigned to a parent issue
+ */
+async function handleCopilotAssignment(octokit, owner, repo, parentNumber, assignee) {
+    core.info(`Handling Copilot assignment to parent issue #${parentNumber}`);
+    // Find all subtasks
+    const subtasks = await (0, subtask_discovery_1.findSubtasks)(octokit, owner, repo, parentNumber);
+    if (subtasks.length === 0) {
+        core.info("No subtasks found for this parent issue");
+        await (0, assignment_manager_1.postStatusComment)(octokit, owner, repo, parentNumber, assignee, [], []);
+        return;
+    }
+    // Check for circular dependencies
+    const circularDep = (0, dependency_resolver_1.detectCircularDependencies)(subtasks);
+    if (circularDep) {
+        core.error(circularDep);
+        await octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: parentNumber,
+            body: `🤖 **Copilot Subtask Manager - Error**\n\n${circularDep}\n\nPlease fix the circular dependency before proceeding.`,
+        });
+        core.setFailed(circularDep);
+        return;
+    }
+    // Analyze dependencies
+    const analyses = await (0, dependency_resolver_1.analyzeSubtasks)(octokit, owner, repo, subtasks);
+    // Find ready subtasks
+    const readySubtasks = analyses.filter((a) => a.isReady);
+    core.info(`Found ${readySubtasks.length} ready subtask(s) out of ${subtasks.length} total`);
+    // Assign Copilot to ready subtasks
+    if (readySubtasks.length > 0) {
+        await (0, assignment_manager_1.assignCopilotToSubtasks)(octokit, owner, repo, assignee, readySubtasks);
+    }
+    // Post status comment
+    await (0, assignment_manager_1.postStatusComment)(octokit, owner, repo, parentNumber, assignee, readySubtasks, analyses);
+}
+/**
+ * Handle a subtask being completed
+ */
+async function handleSubtaskCompletion(octokit, owner, repo, completedSubtaskNumber) {
+    core.info(`Handling completion of subtask #${completedSubtaskNumber}`);
+    // Get the parent issue number
+    const parentNumber = await getParentIssueNumber(octokit, owner, repo, completedSubtaskNumber);
+    if (!parentNumber) {
+        core.info("Completed issue is not a subtask, skipping");
+        return;
+    }
+    core.info(`Found parent issue #${parentNumber}`);
+    // Find remaining open subtasks
+    const subtasks = await (0, subtask_discovery_1.findSubtasks)(octokit, owner, repo, parentNumber);
+    if (subtasks.length === 0) {
+        core.info("No remaining subtasks found");
+        await (0, assignment_manager_1.postProgressComment)(octokit, owner, repo, parentNumber, completedSubtaskNumber, [], []);
+        return;
+    }
+    // Analyze dependencies
+    const analyses = await (0, dependency_resolver_1.analyzeSubtasks)(octokit, owner, repo, subtasks);
+    // Find subtasks that became ready
+    const newlyReady = (0, dependency_resolver_1.findNewlyReadySubtasks)(completedSubtaskNumber, analyses);
+    core.info(`Found ${newlyReady.length} newly unblocked subtask(s)`);
+    // Assign Copilot to newly ready subtasks
+    const copilotLogin = "copilot";
+    if (newlyReady.length > 0) {
+        await (0, assignment_manager_1.assignCopilotToSubtasks)(octokit, owner, repo, copilotLogin, newlyReady);
+    }
+    // Post progress comment
+    await (0, assignment_manager_1.postProgressComment)(octokit, owner, repo, parentNumber, completedSubtaskNumber, newlyReady, analyses);
+}
+/**
+ * Main entry point
  */
 async function run() {
     try {
         // Get inputs
         const token = core.getInput("token", { required: true });
-        const model = core.getInput("model") || "xai/grok-3-mini";
-        const anthropicKey = core.getInput("anthropic-api-key") || "";
-        const openaiKey = core.getInput("openai-api-key") || "";
-        const projectOwner = core.getInput("project-owner");
-        const projectNumber = core.getInput("project-number");
-        const skipTriggerCheck = core.getInput("skip-trigger-check") === "true";
-        // Initialize GitHub client
+        // Initialize Octokit
         const octokit = github.getOctokit(token);
         const context = github.context;
-        // Validate context
-        if (!context.payload.issue) {
-            throw new Error("This action must be triggered by an issue event");
+        const { owner, repo } = context.repo;
+        core.info(`Event: ${context.eventName}`);
+        core.info(`Action: ${context.payload.action || "N/A"}`);
+        // Determine what event triggered this
+        const eventContext = getEventContext(context);
+        if (eventContext.isCopilotAssignment && eventContext.parentIssueNumber) {
+            const assignee = context.payload.assignee?.login || "copilot";
+            await handleCopilotAssignment(octokit, owner, repo, eventContext.parentIssueNumber, assignee);
         }
-        const issueNumber = context.payload.issue.number;
-        const owner = context.repo.owner;
-        const repo = context.repo.repo;
-        core.info(`Processing issue #${issueNumber} in ${owner}/${repo}`);
-        // Check default triggers (unless skipped)
-        if (!skipTriggerCheck && !shouldRunTriage(context)) {
-            core.info("⏭️  Skipping: Does not match default triggers");
-            core.info("Triggers: issue opened, or labels: needs-triage, triage:backlog");
-            return;
-        }
-        // Create action context
-        const ctx = {
-            octokit,
-            context,
-            issueNumber,
-            owner,
-            repo,
-        };
-        // Fetch existing subtasks
-        const existingSubtasks = await (0, subtasks_1.fetchExistingSubtasks)(ctx);
-        if (existingSubtasks.length > 0) {
-            core.info(`Found ${existingSubtasks.length} existing subtasks`);
-        }
-        // Analyze issue with AI
-        const analysis = await (0, analyze_1.analyzeIssue)(ctx, model, anthropicKey, openaiKey, token, existingSubtasks);
-        core.info("AI analysis complete");
-        core.debug(`Analysis: ${JSON.stringify(analysis, null, 2)}`);
-        // Process triage (update issue, add labels, post comments)
-        await (0, process_triage_1.processTriageAnalysis)(ctx, analysis);
-        // Update project fields if configured
-        if (projectOwner && projectNumber) {
-            const projectConfig = {
-                owner: projectOwner,
-                number: parseInt(projectNumber, 10),
-            };
-            await (0, update_project_1.updateProjectFields)(ctx, analysis, projectConfig);
+        else if (eventContext.isSubtaskCompletion &&
+            eventContext.completedSubtaskNumber) {
+            await handleSubtaskCompletion(octokit, owner, repo, eventContext.completedSubtaskNumber);
         }
         else {
-            core.info("Project configuration not provided, skipping project update");
+            core.info("Event is not a Copilot assignment or subtask completion, skipping");
         }
-        // Set outputs
-        core.setOutput("is-agent-ready", analysis.is_agent_ready);
-        core.setOutput("priority", analysis.priority);
-        core.setOutput("size", analysis.size);
-        core.setOutput("labels", analysis.labels.join(","));
-        core.info("✅ Triage complete!");
+        core.info("✅ Action completed successfully");
     }
     catch (error) {
-        if (error instanceof Error) {
-            core.setFailed(error.message);
-        }
-        else {
-            core.setFailed("An unknown error occurred");
+        core.setFailed(`Action failed: ${error.message}`);
+        if (error.stack) {
+            core.debug(error.stack);
         }
     }
 }
-// Run the action
 run();
 
 
 /***/ }),
 
-/***/ 1585:
+/***/ 83:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
 /**
- * Multi-provider AI model support
- * Supports GitHub Models, Anthropic, and OpenAI
+ * Subtask discovery and dependency parsing
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -30410,905 +30520,98 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.detectProvider = detectProvider;
-exports.getModelConfig = getModelConfig;
-exports.callModel = callModel;
+exports.findSubtasks = findSubtasks;
+exports.parseDependencies = parseDependencies;
+exports.isIssueClosed = isIssueClosed;
 const core = __importStar(__nccwpck_require__(7484));
 /**
- * Detect model provider from model name
+ * Find all subtasks for a given parent issue
  */
-function detectProvider(modelName) {
-    const normalized = modelName.toLowerCase();
-    // Claude models → Anthropic
-    if (normalized.startsWith("claude-")) {
-        return "anthropic";
-    }
-    // GPT models → OpenAI
-    if (normalized.startsWith("gpt-") || normalized.startsWith("o1-")) {
-        return "openai";
-    }
-    // Default to GitHub Models (handles xai/*, meta-llama/*, etc.)
-    return "github";
-}
-/**
- * Get model configuration with validation
- */
-function getModelConfig(model, anthropicKey, openaiKey) {
-    const provider = detectProvider(model);
-    const config = {
-        provider,
-        model,
-    };
-    // Validate API keys for providers that need them
-    if (provider === "anthropic") {
-        if (!anthropicKey) {
-            throw new Error(`Model '${model}' requires an Anthropic API key. ` +
-                `Please provide 'anthropic-api-key' input. ` +
-                `Get your API key at: https://console.anthropic.com/`);
-        }
-        config.apiKey = anthropicKey;
-    }
-    else if (provider === "openai") {
-        if (!openaiKey) {
-            throw new Error(`Model '${model}' requires an OpenAI API key. ` +
-                `Please provide 'openai-api-key' input. ` +
-                `Get your API key at: https://platform.openai.com/api-keys`);
-        }
-        config.apiKey = openaiKey;
-    }
-    core.info(`Using ${provider} provider for model: ${model}`);
-    return config;
-}
-/**
- * Call the appropriate AI model based on provider
- */
-async function callModel(config, systemPrompt, userPrompt, githubToken) {
-    switch (config.provider) {
-        case "anthropic":
-            return callAnthropicAPI(config.model, config.apiKey, systemPrompt, userPrompt);
-        case "openai":
-            return callOpenAIAPI(config.model, config.apiKey, systemPrompt, userPrompt);
-        case "github":
-            return callGitHubModels(config.model, githubToken, systemPrompt, userPrompt);
-        default:
-            throw new Error(`Unknown provider: ${config.provider}`);
-    }
-}
-/**
- * Call Anthropic API (for Claude models)
- */
-async function callAnthropicAPI(model, apiKey, systemPrompt, userPrompt) {
-    core.debug("Calling Anthropic API...");
-    const endpoint = "https://api.anthropic.com/v1/messages";
-    const body = {
-        model,
-        max_tokens: 2000,
-        system: systemPrompt,
-        messages: [
-            {
-                role: "user",
-                content: userPrompt,
-            },
-        ],
-        temperature: 0.3,
-    };
-    try {
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key": apiKey,
-                "anthropic-version": "2023-06-01",
-            },
-            body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        const result = (await response.json());
-        if (!result.content || result.content.length === 0) {
-            throw new Error("No response from Anthropic API");
-        }
-        if (!result.content[0] || !result.content[0].text) {
-            throw new Error("Invalid response structure from Anthropic API");
-        }
-        const content = result.content[0].text;
-        core.debug(`Anthropic response: ${content}`);
-        return content;
-    }
-    catch (error) {
-        core.error(`Anthropic API error: ${error.message}`);
-        throw new Error(`Failed to call Anthropic API: ${error.message}`);
-    }
-}
-/**
- * Call OpenAI API (for GPT models)
- */
-async function callOpenAIAPI(model, apiKey, systemPrompt, userPrompt) {
-    core.debug("Calling OpenAI API...");
-    const endpoint = "https://api.openai.com/v1/chat/completions";
-    const body = {
-        model,
-        messages: [
-            {
-                role: "system",
-                content: systemPrompt,
-            },
-            {
-                role: "user",
-                content: userPrompt,
-            },
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-    };
-    try {
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        const result = (await response.json());
-        if (!result.choices || result.choices.length === 0) {
-            throw new Error("No response from OpenAI API");
-        }
-        if (!result.choices[0] ||
-            !result.choices[0].message ||
-            !result.choices[0].message.content) {
-            throw new Error("Invalid response structure from OpenAI API");
-        }
-        const content = result.choices[0].message.content;
-        core.debug(`OpenAI response: ${content}`);
-        return content;
-    }
-    catch (error) {
-        core.error(`OpenAI API error: ${error.message}`);
-        throw new Error(`Failed to call OpenAI API: ${error.message}`);
-    }
-}
-/**
- * Call GitHub Models API (for Grok and other free models)
- */
-async function callGitHubModels(model, githubToken, systemPrompt, userPrompt) {
-    core.debug("Calling GitHub Models API...");
-    const endpoint = "https://models.github.ai/inference/chat/completions";
-    const body = {
-        messages: [
-            {
-                role: "system",
-                content: systemPrompt,
-            },
-            {
-                role: "user",
-                content: userPrompt,
-            },
-        ],
-        model,
-        temperature: 0.3,
-        max_tokens: 2000,
-    };
-    try {
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${githubToken}`,
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
-            body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        const result = (await response.json());
-        if (!result.choices || result.choices.length === 0) {
-            throw new Error("No response from GitHub Models API");
-        }
-        if (!result.choices[0] ||
-            !result.choices[0].message ||
-            !result.choices[0].message.content) {
-            throw new Error("Invalid response structure from GitHub Models API");
-        }
-        const content = result.choices[0].message.content;
-        core.debug(`GitHub Models response: ${content}`);
-        return content;
-    }
-    catch (error) {
-        core.error(`GitHub Models API error: ${error.message}`);
-        throw new Error(`Failed to call GitHub Models API: ${error.message}`);
-    }
-}
-
-
-/***/ }),
-
-/***/ 7983:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-/**
- * Process triage analysis and update GitHub issue
- */
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.processTriageAnalysis = processTriageAnalysis;
-const core = __importStar(__nccwpck_require__(7484));
-const subtasks_1 = __nccwpck_require__(1803);
-/**
- * Process the AI triage analysis and update the issue accordingly
- */
-async function processTriageAnalysis(ctx, analysis) {
-    core.info("Processing triage analysis...");
-    core.info(`Agent ready: ${analysis.is_agent_ready}`);
-    core.info(`Priority: ${analysis.priority}`);
-    core.info(`Size: ${analysis.size}`);
-    core.info(`Needs subtasks: ${analysis.needs_subtasks}`);
-    // 1. Apply labels
-    await applyLabels(ctx, analysis);
-    // 2. Handle subtasks
-    await handleSubtasks(ctx, analysis);
-    // 3. Handle agent readiness
-    if (!analysis.is_agent_ready) {
-        await handleNotAgentReady(ctx, analysis);
-    }
-    else {
-        await handleAgentReady(ctx, analysis);
-    }
-    // 4. Remove needs-triage label if present
-    await removeTriageLabel(ctx);
-    core.info("✅ Triage processing complete");
-}
-/**
- * Apply labels to the issue
- */
-async function applyLabels(ctx, analysis) {
-    if (analysis.labels.length === 0) {
-        core.info("No labels to apply");
-        return;
-    }
-    core.info(`Applying labels: ${analysis.labels.join(", ")}`);
-    await ctx.octokit.rest.issues.addLabels({
-        owner: ctx.owner,
-        repo: ctx.repo,
-        issue_number: ctx.issueNumber,
-        labels: analysis.labels,
+async function findSubtasks(octokit, owner, repo, parentNumber) {
+    core.info(`Looking for subtasks of parent issue #${parentNumber}`);
+    // Get all open issues in the repository
+    const { data: allIssues } = await octokit.rest.issues.listForRepo({
+        owner,
+        repo,
+        state: "open",
+        per_page: 100,
     });
-}
-/**
- * Handle issue that is NOT agent-ready
- */
-async function handleNotAgentReady(ctx, analysis) {
-    core.info("Issue is not agent-ready");
-    // If we have clarifying questions, post them
-    if (analysis.clarifying_questions &&
-        analysis.clarifying_questions.length > 0) {
-        const questions = analysis.clarifying_questions
-            .map((q, i) => `${i + 1}. ${q}`)
-            .join("\n");
-        const body = `🤖 **AI Triage: Clarification Needed**\n\n` +
-            `This issue needs more details before it can be assigned to an agent. ` +
-            `Please provide the following information:\n\n${questions}\n\n` +
-            `**Reasoning:** ${analysis.reasoning}\n\n` +
-            `Once you've provided these details, add the \`needs-triage\` label again to re-run the analysis.`;
-        await ctx.octokit.rest.issues.createComment({
-            owner: ctx.owner,
-            repo: ctx.repo,
-            issue_number: ctx.issueNumber,
-            body,
-        });
-        core.info("Posted clarifying questions");
-    }
-    // If we have an enhanced description, update the issue body
-    if (analysis.enhanced_description) {
-        await ctx.octokit.rest.issues.update({
-            owner: ctx.owner,
-            repo: ctx.repo,
-            issue_number: ctx.issueNumber,
-            body: analysis.enhanced_description,
-        });
-        const body = `🤖 **AI Triage: Description Enhanced**\n\n` +
-            `The issue description has been enhanced to be more specific and actionable.\n\n` +
-            `**Reasoning:** ${analysis.reasoning}`;
-        await ctx.octokit.rest.issues.createComment({
-            owner: ctx.owner,
-            repo: ctx.repo,
-            issue_number: ctx.issueNumber,
-            body,
-        });
-        core.info("Enhanced issue description");
-    }
-}
-/**
- * Handle issue that IS agent-ready
- */
-async function handleAgentReady(ctx, analysis) {
-    core.info("Issue is agent-ready");
-    // Add ready-for-review label
-    await ctx.octokit.rest.issues.addLabels({
-        owner: ctx.owner,
-        repo: ctx.repo,
-        issue_number: ctx.issueNumber,
-        labels: ["status:ready-for-review"],
-    });
-    // Create summary comment
-    const relatedIssues = analysis.related_issues.length > 0
-        ? `**Related Issues:** ${analysis.related_issues.map((n) => `#${n}`).join(", ")}\n`
-        : "";
-    const suggestedAssignee = analysis.suggested_assignee
-        ? `**Suggested Assignee:** @${analysis.suggested_assignee}\n`
-        : "";
-    const body = `✅ **AI Triage: Agent Ready**\n\nThis issue is well-defined and ready for implementation.\n\n**Priority:** ${analysis.priority}\n**Size Estimate:** ${analysis.size}\n**Labels Applied:** ${analysis.labels.join(", ")}\n${relatedIssues}${suggestedAssignee}\n**Reasoning:** ${analysis.reasoning}`;
-    await ctx.octokit.rest.issues.createComment({
-        owner: ctx.owner,
-        repo: ctx.repo,
-        issue_number: ctx.issueNumber,
-        body,
-    });
-    core.info("Marked issue as agent-ready");
-}
-/**
- * Handle subtask creation and feedback
- */
-async function handleSubtasks(ctx, analysis) {
-    // Create new subtasks if needed
-    if (analysis.needs_subtasks && analysis.subtasks_to_create.length > 0) {
-        core.info(`Creating ${analysis.subtasks_to_create.length} new subtasks...`);
-        const createdIssues = await (0, subtasks_1.createSubtasks)(ctx, analysis.subtasks_to_create);
-        if (createdIssues.length !== analysis.subtasks_to_create.length) {
-            core.warning(`⚠️ Only ${createdIssues.length} out of ${analysis.subtasks_to_create.length} subtasks were created. Some subtasks may have failed to create.`);
-        }
-        core.info(`✅ Created ${createdIssues.length} subtasks (requested: ${analysis.subtasks_to_create.length})`);
-    }
-    // Post feedback on existing subtasks
-    if (analysis.subtask_feedback.length > 0 ||
-        analysis.overall_subtask_feedback) {
-        await (0, subtasks_1.postSubtaskFeedback)(ctx, analysis.subtask_feedback, analysis.overall_subtask_feedback);
-        core.info("✅ Posted subtask feedback");
-    }
-}
-/**
- * Remove the needs-triage label
- */
-async function removeTriageLabel(ctx) {
-    try {
-        await ctx.octokit.rest.issues.removeLabel({
-            owner: ctx.owner,
-            repo: ctx.repo,
-            issue_number: ctx.issueNumber,
-            name: "needs-triage",
-        });
-        core.info("Removed needs-triage label");
-    }
-    catch (error) {
-        // Label might not exist, ignore
-        core.debug("needs-triage label not present or already removed");
-    }
-}
-
-
-/***/ }),
-
-/***/ 1803:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-/**
- * Handle subtask operations - fetching existing subtasks and creating new ones
- */
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fetchExistingSubtasks = fetchExistingSubtasks;
-exports.createSubtasks = createSubtasks;
-exports.postSubtaskFeedback = postSubtaskFeedback;
-const core = __importStar(__nccwpck_require__(7484));
-/**
- * Fetch existing subtasks for an issue
- * Subtasks are identified by issues that reference the parent issue
- */
-async function fetchExistingSubtasks(ctx) {
-    core.info(`Fetching existing subtasks for issue #${ctx.issueNumber}...`);
-    try {
-        // Use GitHub's timeline API to find references
-        const timeline = await ctx.octokit.rest.issues.listEventsForTimeline({
-            owner: ctx.owner,
-            repo: ctx.repo,
-            issue_number: ctx.issueNumber,
-            per_page: 100,
-        });
-        const subtaskNumbers = new Set();
-        // Look for cross-references in timeline events
-        for (const event of timeline.data) {
-            const eventAny = event;
-            if (event.event === "cross-referenced" && eventAny.source) {
-                const source = eventAny.source;
-                if (source.issue && source.issue.number !== ctx.issueNumber) {
-                    subtaskNumbers.add(source.issue.number);
-                }
-            }
-        }
-        // Also search for issues that mention this issue in their body
-        const searchQuery = `repo:${ctx.owner}/${ctx.repo} is:issue #${ctx.issueNumber} in:body`;
-        const searchResults = await ctx.octokit.rest.search.issuesAndPullRequests({
-            q: searchQuery,
-            per_page: 100,
-        });
-        for (const issue of searchResults.data.items) {
-            if (issue.number !== ctx.issueNumber && !issue.pull_request) {
-                subtaskNumbers.add(issue.number);
-            }
-        }
-        // Fetch full details for each subtask in parallel
-        const subtaskPromises = Array.from(subtaskNumbers).map(async (number) => {
-            try {
-                const { data: issue } = await ctx.octokit.rest.issues.get({
-                    owner: ctx.owner,
-                    repo: ctx.repo,
-                    issue_number: number,
-                });
-                // Only include if the issue body actually references the parent
-                if (issue.body &&
-                    (issue.body.includes(`#${ctx.issueNumber}`) ||
-                        issue.body.includes(`${ctx.owner}/${ctx.repo}#${ctx.issueNumber}`))) {
-                    return {
-                        number: issue.number,
-                        title: issue.title,
-                        body: issue.body || "",
-                        state: issue.state,
-                    };
-                }
-                return null;
-            }
-            catch (error) {
-                core.warning(`Failed to fetch issue #${number}: ${error}`);
-                return null;
-            }
-        });
-        const results = await Promise.all(subtaskPromises);
-        const subtasks = results.filter((subtask) => subtask !== null);
-        core.info(`Found ${subtasks.length} existing subtasks`);
-        return subtasks;
-    }
-    catch (error) {
-        core.warning(`Error fetching subtasks: ${error}`);
-        return [];
-    }
-}
-/**
- * Create new subtasks for an issue
- */
-async function createSubtasks(ctx, subtasks) {
-    core.info(`Creating ${subtasks.length} subtasks...`);
-    const createdIssues = [];
-    const issueNumberMap = new Map();
-    const parentCommentLines = [];
-    // First pass: create all subtasks
-    for (let i = 0; i < subtasks.length; i++) {
-        const subtask = subtasks[i];
-        try {
-            // Add reference to parent issue in the body
-            const bodyWithParent = `${subtask.body}\n\n---\n\nParent task: #${ctx.issueNumber}`;
-            // Create the issue
-            const { data: newIssue } = await ctx.octokit.rest.issues.create({
-                owner: ctx.owner,
-                repo: ctx.repo,
-                title: subtask.title,
-                body: bodyWithParent,
-                labels: subtask.labels,
-            });
-            createdIssues.push(newIssue.number);
-            issueNumberMap.set(i, newIssue.number);
-            core.info(`✅ Created subtask #${newIssue.number}: ${subtask.title}`);
-            // Collect info for batched parent comment
-            const metaInfo = `Priority: ${subtask.priority} | Size: ${subtask.size}`;
-            parentCommentLines.push(`- #${newIssue.number} - ${subtask.title} (${metaInfo})`);
-        }
-        catch (error) {
-            core.error(`Failed to create subtask "${subtask.title}": ${error}`);
-        }
-    }
-    // Post a single batched comment to parent issue with all created subtasks
-    if (parentCommentLines.length > 0) {
-        try {
-            const batchedComment = `✅ **Created ${parentCommentLines.length} subtask(s):**\n\n${parentCommentLines.join("\n")}`;
-            await ctx.octokit.rest.issues.createComment({
-                owner: ctx.owner,
-                repo: ctx.repo,
-                issue_number: ctx.issueNumber,
-                body: batchedComment,
+    // Filter issues that have the parent label
+    const subtasks = [];
+    const parentLabel = `parent:${parentNumber}`;
+    for (const issue of allIssues) {
+        const hasParentLabel = issue.labels.some((label) => typeof label === "object" && label.name && label.name === parentLabel);
+        const bodyMentionsParent = issue.body &&
+            (issue.body.includes(`#${parentNumber}`) ||
+                issue.body.includes(`Parent Issue: #${parentNumber}`));
+        if (hasParentLabel || bodyMentionsParent) {
+            const labelNames = issue.labels?.map((l) => (typeof l === "object" ? l.name || "" : "")) ||
+                [];
+            const assigneeLogins = issue.assignees?.map((a) => a?.login || "").filter((l) => l) || [];
+            const dependencies = parseDependencies(issue.body || "", labelNames);
+            subtasks.push({
+                number: issue.number,
+                title: issue.title,
+                body: issue.body || null,
+                state: issue.state,
+                labels: labelNames,
+                assignees: assigneeLogins,
+                dependencies,
             });
         }
-        catch (error) {
-            core.warning(`Failed to post batched comment on parent issue: ${error}`);
-        }
     }
-    // Second pass: add blocked_by comments now that all issues are created
-    for (let i = 0; i < subtasks.length; i++) {
-        const subtask = subtasks[i];
-        const newIssueNumber = issueNumberMap.get(i);
-        if (!newIssueNumber) {
-            continue; // Skip if this subtask failed to create
-        }
-        if (subtask.blocked_by.length > 0) {
-            try {
-                const blockedByText = subtask.blocked_by.map((n) => `#${n}`).join(", ");
-                await ctx.octokit.rest.issues.createComment({
-                    owner: ctx.owner,
-                    repo: ctx.repo,
-                    issue_number: newIssueNumber,
-                    body: `⚠️ **Blocked By:** ${blockedByText}\n\nThis subtask depends on the completion of the above tasks. Please complete those before starting this one.`,
-                });
-            }
-            catch (error) {
-                core.warning(`Failed to add blocked_by comment to subtask #${newIssueNumber}: ${error}`);
-            }
-        }
-    }
-    return createdIssues;
+    core.info(`Found ${subtasks.length} subtask(s)`);
+    return subtasks;
 }
 /**
- * Post feedback on existing subtasks
+ * Parse dependency information from issue body and labels
  */
-async function postSubtaskFeedback(ctx, feedback, overallFeedback) {
-    core.info(`Posting feedback on ${feedback.length} subtasks...`);
-    // Post individual feedback on each subtask
-    for (const item of feedback) {
-        try {
-            const statusEmoji = item.is_ready ? "✅" : "⚠️";
-            const readyText = item.is_ready
-                ? "This subtask is well-defined and ready."
-                : "This subtask needs improvements before it's ready.";
-            let body = `${statusEmoji} **AI Triage Feedback on Subtask**\n\n${readyText}\n\n${item.feedback}`;
-            if (item.suggested_improvements.length > 0) {
-                const improvements = item.suggested_improvements
-                    .map((imp, i) => `${i + 1}. ${imp}`)
-                    .join("\n");
-                body += `\n\n**Suggested Improvements:**\n${improvements}`;
-            }
-            await ctx.octokit.rest.issues.createComment({
-                owner: ctx.owner,
-                repo: ctx.repo,
-                issue_number: item.issue_number,
-                body,
-            });
-            core.info(`✅ Posted feedback on subtask #${item.issue_number}`);
+function parseDependencies(body, labels) {
+    const dependencies = [];
+    // Parse from issue body
+    if (body) {
+        // Pattern: "depends on #123" or "depends-on: #124"
+        const dependsMatches = body.matchAll(/depends[- ]on:?\s*#(\d+)/gi);
+        for (const match of dependsMatches) {
+            dependencies.push(parseInt(match[1]));
         }
-        catch (error) {
-            core.error(`Failed to post feedback on subtask #${item.issue_number}: ${error}`);
+        // Pattern: "requires #125" or "requires: #126, #127"
+        const requiresMatches = body.matchAll(/requires:?\s*#(\d+)/gi);
+        for (const match of requiresMatches) {
+            dependencies.push(parseInt(match[1]));
+        }
+        // Pattern: "blocked by #128"
+        const blockedMatches = body.matchAll(/blocked\s+by:?\s*#(\d+)/gi);
+        for (const match of blockedMatches) {
+            dependencies.push(parseInt(match[1]));
         }
     }
-    // Post overall feedback on the parent issue
-    if (overallFeedback && feedback.length > 0) {
-        try {
-            const subtaskList = feedback
-                .map((f) => {
-                const statusEmoji = f.is_ready ? "✅" : "⚠️";
-                return `- ${statusEmoji} #${f.issue_number}`;
-            })
-                .join("\n");
-            const body = `🔍 **AI Triage: Subtask Analysis**\n\n` +
-                `**Subtasks:**\n${subtaskList}\n\n` +
-                `**Overall Assessment:**\n${overallFeedback}`;
-            await ctx.octokit.rest.issues.createComment({
-                owner: ctx.owner,
-                repo: ctx.repo,
-                issue_number: ctx.issueNumber,
-                body,
-            });
-            core.info("✅ Posted overall subtask feedback on parent issue");
-        }
-        catch (error) {
-            core.error(`Failed to post overall feedback: ${error}`);
+    // Parse from labels (e.g., "depends-on:#123")
+    for (const label of labels) {
+        const match = label.match(/depends-on:#?(\d+)/i);
+        if (match) {
+            dependencies.push(parseInt(match[1]));
         }
     }
-}
-
-
-/***/ }),
-
-/***/ 3418:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-/**
- * Update GitHub Project V2 fields
- */
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.updateProjectFields = updateProjectFields;
-const core = __importStar(__nccwpck_require__(7484));
-/**
- * Add issue to project and update fields
- */
-async function updateProjectFields(ctx, analysis, projectConfig) {
-    core.info("Updating project fields...");
-    // Get project fields
-    const fields = await getProjectFields(ctx, projectConfig);
-    // Add issue to project
-    const itemId = await addIssueToProject(ctx, fields.projectId);
-    // Update fields
-    await updateStatus(ctx, fields, itemId, analysis.is_agent_ready);
-    await updatePriority(ctx, fields, itemId, analysis.priority);
-    await updateSize(ctx, fields, itemId, analysis.size);
-    core.info("✅ Project fields updated");
+    // Remove duplicates and return
+    return [...new Set(dependencies)];
 }
 /**
- * Fetch project fields and their IDs
+ * Check if an issue is closed
  */
-async function getProjectFields(ctx, projectConfig) {
-    core.info(`Fetching project fields for project #${projectConfig.number}...`);
-    const query = `
-    query($owner: String!, $number: Int!) {
-      user(login: $owner) {
-        projectV2(number: $number) {
-          id
-          fields(first: 20) {
-            nodes {
-              ... on ProjectV2Field {
-                id
-                name
-              }
-              ... on ProjectV2SingleSelectField {
-                id
-                name
-                options {
-                  id
-                  name
-                }
-              }
-            }
-          }
-        }
-      }
-      organization(login: $owner) {
-        projectV2(number: $number) {
-          id
-          fields(first: 20) {
-            nodes {
-              ... on ProjectV2Field {
-                id
-                name
-              }
-              ... on ProjectV2SingleSelectField {
-                id
-                name
-                options {
-                  id
-                  name
-                }
-              }
-            }
-          }
-        }
-      }
+async function isIssueClosed(octokit, owner, repo, issueNumber) {
+    try {
+        const { data: issue } = await octokit.rest.issues.get({
+            owner,
+            repo,
+            issue_number: issueNumber,
+        });
+        return issue.state === "closed";
     }
-  `;
-    const result = await ctx.octokit.graphql(query, {
-        owner: projectConfig.owner,
-        number: projectConfig.number,
-    });
-    // Try user project first, then organization project
-    const project = result.user?.projectV2 || result.organization?.projectV2;
-    if (!project) {
-        throw new Error(`Could not find ProjectV2 with number ${projectConfig.number} for owner ${projectConfig.owner}`);
+    catch (error) {
+        core.warning(`Could not check status of issue #${issueNumber}: ${error}`);
+        return false; // Assume not closed if we can't check
     }
-    const projectId = project.id;
-    const fieldNodes = project.fields.nodes;
-    const statusField = fieldNodes.find((f) => f.name === "Status");
-    const priorityField = fieldNodes.find((f) => f.name === "Priority");
-    const sizeField = fieldNodes.find((f) => f.name === "Size");
-    if (!statusField || !priorityField || !sizeField) {
-        throw new Error("Required project fields not found (Status, Priority, Size)");
-    }
-    core.info("✅ Project fields fetched");
-    return {
-        projectId,
-        status: statusField,
-        priority: priorityField,
-        size: sizeField,
-    };
-}
-/**
- * Add issue to project
- */
-async function addIssueToProject(ctx, projectId) {
-    core.info("Adding issue to project...");
-    const mutation = `
-    mutation($projectId: ID!, $contentId: ID!) {
-      addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
-        item {
-          id
-        }
-      }
-    }
-  `;
-    const issueNodeId = ctx.context.payload.issue?.node_id;
-    if (!issueNodeId) {
-        throw new Error("Issue node_id not found in context");
-    }
-    const result = await ctx.octokit.graphql(mutation, {
-        projectId,
-        contentId: issueNodeId,
-    });
-    if (!result.addProjectV2ItemById ||
-        !result.addProjectV2ItemById.item ||
-        !result.addProjectV2ItemById.item.id) {
-        throw new Error("Invalid response from GitHub API when adding issue to project");
-    }
-    const itemId = result.addProjectV2ItemById.item.id;
-    core.info(`✅ Added to project, item ID: ${itemId}`);
-    return itemId;
-}
-/**
- * Update Status field
- */
-async function updateStatus(ctx, fields, itemId, isAgentReady) {
-    const targetStatus = isAgentReady ? "Ready" : "Backlog";
-    const statusOption = fields.status.options.find((o) => o.name === targetStatus);
-    if (!statusOption) {
-        core.warning(`Status option "${targetStatus}" not found`);
-        return;
-    }
-    await updateSingleSelectField(ctx, fields.projectId, itemId, fields.status.id, statusOption.id);
-    core.info(`Set status to: ${targetStatus}`);
-}
-/**
- * Update Priority field
- */
-async function updatePriority(ctx, fields, itemId, priority) {
-    const priorityOption = fields.priority.options.find((o) => o.name === priority);
-    if (!priorityOption) {
-        core.warning(`Priority option "${priority}" not found`);
-        return;
-    }
-    await updateSingleSelectField(ctx, fields.projectId, itemId, fields.priority.id, priorityOption.id);
-    core.info(`Set priority to: ${priority}`);
-}
-/**
- * Update Size field
- */
-async function updateSize(ctx, fields, itemId, size) {
-    const sizeOption = fields.size.options.find((o) => o.name === size);
-    if (!sizeOption) {
-        core.warning(`Size option "${size}" not found`);
-        return;
-    }
-    await updateSingleSelectField(ctx, fields.projectId, itemId, fields.size.id, sizeOption.id);
-    core.info(`Set size to: ${size}`);
-}
-/**
- * Update a single select field (generic helper)
- */
-async function updateSingleSelectField(ctx, projectId, itemId, fieldId, optionId) {
-    const mutation = `
-    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!) {
-      updateProjectV2ItemFieldValue(
-        input: {
-          projectId: $projectId
-          itemId: $itemId
-          fieldId: $fieldId
-          value: {singleSelectOptionId: $value}
-        }
-      ) {
-        projectV2Item {
-          id
-        }
-      }
-    }
-  `;
-    await ctx.octokit.graphql(mutation, {
-        projectId,
-        itemId,
-        fieldId,
-        value: optionId,
-    });
 }
 
 

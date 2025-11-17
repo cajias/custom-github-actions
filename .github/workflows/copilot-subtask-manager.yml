@@ -1,0 +1,31 @@
+name: Copilot Subtask Manager
+
+on:
+  issues:
+    types: [assigned]
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  models: read  # Required for AI-powered dependency analysis
+
+jobs:
+  manage-subtasks:
+    name: Manage Copilot Subtask Assignments
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Manage Copilot Subtasks
+        uses: ./copilot-subtask-manager
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Uncomment the following lines to enable AI-powered dependency analysis
+          # enable-ai-analysis: true
+          # ai-token: ${{ secrets.COPILOT_MANAGER_PAT }}
+          # model: openai/gpt-4o

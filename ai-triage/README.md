@@ -1,5 +1,8 @@
 # AI Issue Triage Action
 
+> **📢 New:** Check out [ai-triage-mcp](../ai-triage-mcp/) (v2) for a simpler, MCP-based implementation with
+> automatic tool use. See [comparison guide](../docs/ai-triage-comparison.md) for differences.
+
 AI-powered GitHub issue triage using multiple AI providers. This action automatically analyzes new issues and:
 
 - **Applies appropriate labels** (type, scope, priority)
@@ -27,26 +30,33 @@ AI-powered GitHub issue triage using multiple AI providers. This action automati
 This action supports three AI providers:
 
 ### 1. GitHub Models (Free) ✨
+
 **No API key required** - Uses your `GITHUB_TOKEN`
 
 Available models:
+
 - `xai/grok-3` - Latest Grok model
 - `xai/grok-3-mini` - Faster, lighter Grok (default)
 
 ### 2. Anthropic (Claude) 🤖
+
 **Requires API key** from [Anthropic Console](https://console.anthropic.com/)
 
 Available models:
+
 - `claude-3-5-sonnet-20241022` - Latest Claude 3.5 Sonnet
 - `claude-3-5-haiku-20241022` - Faster, more affordable
 - `claude-3-opus-20240229` - Most capable
 
-**Note:** While GitHub Copilot Pro provides Claude access in IDEs, it's **not available** via GitHub Models API. To use Claude in this action, you need a separate Anthropic API key.
+**Note:** While GitHub Copilot Pro provides Claude access in IDEs, it's **not available**
+via GitHub Models API. To use Claude in this action, you need a separate Anthropic API key.
 
 ### 3. OpenAI (GPT) 🧠
+
 **Requires API key** from [OpenAI Platform](https://platform.openai.com/api-keys)
 
 Available models:
+
 - `gpt-4o` - Latest GPT-4 with vision
 - `gpt-4o-mini` - Faster, more affordable
 - `gpt-4-turbo` - Previous generation
@@ -84,6 +94,7 @@ jobs:
 That's it! 🎉
 
 The action automatically handles trigger logic internally and will only run when:
+
 - ✅ Issue is opened
 - ✅ `needs-triage` label is added
 - ✅ `triage:backlog` label is added
@@ -101,6 +112,7 @@ The action automatically handles trigger logic internally and will only run when
 ```
 
 **Setup:**
+
 1. Get API key from [Anthropic Console](https://console.anthropic.com/)
 2. Add it to your repository secrets as `ANTHROPIC_API_KEY`
 3. Use any `claude-*` model name
@@ -118,6 +130,7 @@ The action automatically handles trigger logic internally and will only run when
 ```
 
 **Setup:**
+
 1. Get API key from [OpenAI Platform](https://platform.openai.com/api-keys)
 2. Add it to your repository secrets as `OPENAI_API_KEY`
 3. Use any `gpt-*` model name
@@ -125,12 +138,15 @@ The action automatically handles trigger logic internally and will only run when
 ### With Project Board Integration (Optional)
 
 **Why configure project integration?**
+
 - Automatically adds issues to your GitHub Project board
 - Sets Status field (Ready/Backlog)
 - Sets Priority field (P0/P1/P2)
 - Sets Size field (XS/S/M/L/XL)
 
-**Without project config:** The action still works fully - it analyzes issues, applies labels, posts comments, and enhances descriptions. Project integration is only for automatic board management.
+**Without project config:** The action still works fully - it analyzes issues, applies labels,
+posts comments, and enhances descriptions. Project integration is only for automatic board
+management.
 
 ```yaml
     steps:
@@ -145,11 +161,13 @@ The action automatically handles trigger logic internally and will only run when
 **How to find your project number:**
 
 For user projects:
+
 - Go to your project: `https://github.com/users/YOUR_USERNAME/projects/`
 - Click on your project
 - The URL will be: `https://github.com/users/YOUR_USERNAME/projects/4` ← **4 is your project number**
 
 For organization projects:
+
 - Go to your organization projects: `https://github.com/orgs/YOUR_ORG/projects/`
 - Click on your project
 - The URL will be: `https://github.com/orgs/YOUR_ORG/projects/4` ← **4 is your project number**
@@ -178,7 +196,9 @@ The action checks these conditions internally, so you don't need `if` conditions
 | `project-number` | Project number to update (for board integration) | No | `''` |
 | `skip-trigger-check` | Skip default trigger checking (advanced) | No | `false` |
 
-**Note:** `project-owner` and `project-number` are only needed if you want automatic GitHub Project board updates (Status, Priority, Size fields). The action works without them - it will still analyze issues, apply labels, and post comments.
+**Note:** `project-owner` and `project-number` are only needed if you want automatic GitHub
+Project board updates (Status, Priority, Size fields). The action works without them - it will
+still analyze issues, apply labels, and post comments.
 
 ### Model Selection Guide
 
@@ -197,6 +217,7 @@ The action checks these conditions internally, so you don't need `if` conditions
   - `gpt-4o-mini` (faster, cheaper)
 
 **Provider Auto-Detection:**
+
 - Model names starting with `claude-` → Anthropic
 - Model names starting with `gpt-` or `o1-` → OpenAI
 - Everything else → GitHub Models
@@ -228,6 +249,7 @@ To enable automatic re-triage when issues are moved to Backlog:
 **📚 [Read the full Project Automation Guide](../docs/PROJECT_AUTOMATION.md)**
 
 Quick setup:
+
 1. Go to your GitHub Project → Workflows
 2. Create workflow: When status → "Backlog", Then add label → "needs-triage"
 3. Issues moved to Backlog will automatically re-triage
@@ -235,6 +257,7 @@ Quick setup:
 ## What Happens
 
 ### If Issue is Agent-Ready ✅
+
 1. Applies labels
 2. Adds `status:ready-for-review` label
 3. Posts summary comment with priority, size, and reasoning
@@ -242,6 +265,7 @@ Quick setup:
 5. Evaluates if subtasks are needed and creates them
 
 ### If Issue Needs Clarification ❓
+
 1. Applies labels
 2. **Posts clarifying questions** as a comment
 3. **OR enhances the description** if possible
@@ -276,6 +300,7 @@ npm run all
 ```
 
 This runs:
+
 - Format checking (Prettier)
 - Linting (ESLint)
 - TypeScript compilation
@@ -283,7 +308,7 @@ This runs:
 
 ## Project Structure
 
-```
+```text
 ai-triage/
 ├── src/
 │   ├── main.ts              # Entry point
