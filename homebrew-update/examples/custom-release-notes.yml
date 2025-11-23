@@ -1,0 +1,72 @@
+# Example: Homebrew Update with Custom Release Notes
+#
+# This workflow demonstrates using a custom release notes template.
+# Copy this file to .github/workflows/ in your source repository.
+
+name: Update Homebrew Formula (Custom Notes)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'lib/**'
+  workflow_dispatch:
+
+jobs:
+  update-homebrew:
+    runs-on: ubuntu-latest
+    name: Update Homebrew Tap
+
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Update Homebrew formula
+        id: update
+        uses: cajias/custom-github-actions/homebrew-update@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tap_repo_token: ${{ secrets.TAP_REPO_TOKEN }}
+          github_user: your-username
+          source_repo: your-project
+          tap_repo: homebrew-tools
+          formula_name: your-formula
+          formula_path: Formula/your-formula.rb
+          version_strategy: date-commit
+          release_notes_template: |
+            ## 🚀 Release {VERSION}
+            
+            This release contains the latest updates from the project.
+            
+            **Build Information:**
+            - Commit: {COMMIT_SHA}
+            - Short Hash: {COMMIT_HASH}
+            
+            **Installation:**
+            ```bash
+            brew tap your-username/tools
+            brew install your-formula
+            ```
+            
+            **Upgrade:**
+            ```bash
+            brew update
+            brew upgrade your-formula
+            ```
+
+      - name: Create release announcement
+        run: |
+          echo "## 📢 New Release Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.update.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ steps.update.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release:** ${{ steps.update.outputs.release_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Install Command" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "brew install your-username/tools/your-formula" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
