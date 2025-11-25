@@ -89,7 +89,7 @@ jobs:
 ### Required Inputs
 
 | Input | Description |
-|-------|-------------|
+| ----- | ----------- |
 | `github_token` | GitHub token with permissions for creating releases and tags. Default: `${{ github.token }}` |
 | `tap_repo_token` | Token with write access to the Homebrew tap repository |
 | `github_user` | GitHub username of the repository owner |
@@ -101,7 +101,7 @@ jobs:
 ### Optional Inputs
 
 | Input | Description | Default |
-|-------|-------------|---------|
+| ----- | ----------- | ------- |
 | `version_strategy` | How to generate the version: `date-commit`, `semver-tag`, or `custom` | `date-commit` |
 | `custom_version` | Custom version string (only used when `version_strategy` is `custom`) | `''` |
 | `custom_release_notes` | Custom release notes template | `''` |
@@ -110,7 +110,7 @@ jobs:
 ## Outputs
 
 | Output | Description |
-|--------|-------------|
+| ------ | ----------- |
 | `version` | The version that was created |
 | `release_url` | URL of the created GitHub release |
 | `formula_updated` | Whether the formula was successfully updated |

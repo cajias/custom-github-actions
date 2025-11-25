@@ -10,7 +10,7 @@ This document provides technical details about the implementation of the Homebre
 
 The action is organized into focused modules:
 
-```
+```text
 src/
 ├── main.ts        # Entry point and orchestration
 ├── types.ts       # TypeScript type definitions
@@ -51,6 +51,7 @@ Format: `YYYYMMDD.shortsha`
 Example: `20231214.abc1234`
 
 **Implementation:**
+
 ```typescript
 const date = getCurrentDate(); // YYYYMMDD
 const hash = await getCommitHash(); // Short SHA
@@ -58,12 +59,14 @@ version = `${date}.${hash}`;
 ```
 
 **Advantages:**
+
 - Always unique
 - Chronologically sortable
 - No tag conflicts
 - Simple and predictable
 
 **Use Case:**
+
 - Continuous deployment projects
 - Projects without traditional releases
 - Internal tools and scripts
@@ -75,6 +78,7 @@ Format: `major.minor.patch`
 Example: `1.2.3` → `1.2.4`
 
 **Implementation:**
+
 ```typescript
 const latestTag = await getLatestSemverTag();
 const parts = latestTag.split('.');
@@ -83,12 +87,14 @@ version = parts.join('.');
 ```
 
 **Advantages:**
+
 - Standard versioning format
 - Compatible with package managers
 - Clear version progression
 - Follows semantic versioning spec
 
 **Use Case:**
+
 - Public libraries and tools
 - Projects following semver
 - APIs with version contracts
@@ -100,16 +106,19 @@ Format: User-defined
 Example: `2.0.0-beta.1`, `v1.0-rc1`
 
 **Implementation:**
+
 ```typescript
 version = customVersionInput;
 ```
 
 **Advantages:**
+
 - Complete flexibility
 - Support for pre-release versions
 - Custom version schemes
 
 **Use Case:**
+
 - Beta/RC releases
 - Non-standard version schemes
 - Complex versioning requirements
@@ -129,6 +138,7 @@ version = customVersionInput;
    - Used for pushing to tap repository
 
 **Security Measures:**
+
 - Tokens passed as GitHub Secrets
 - Masked in logs by Actions runtime
 - Used via `@actions/exec` which handles masking
@@ -137,12 +147,14 @@ version = customVersionInput;
 ### Command Injection Prevention
 
 **SHA256 Calculation:**
+
 ```typescript
 // URL is properly quoted
 await exec.exec('bash', ['-c', `curl -sL "${url}" | shasum -a 256`]);
 ```
 
 **Git Operations:**
+
 ```typescript
 // Parameters passed as array, not shell string
 await exec.exec('git', ['clone', authenticatedUrl, targetPath]);
@@ -152,6 +164,7 @@ await exec.exec('git', ['add', filePath], { cwd: repoPath });
 ### Input Validation
 
 All inputs are validated through TypeScript types:
+
 ```typescript
 interface ActionInputs {
   githubToken: string;
@@ -185,6 +198,7 @@ interface ActionInputs {
 ### Error Messages
 
 All errors include context:
+
 ```typescript
 throw new Error(`Formula file not found: ${formulaPath}`);
 throw new Error(`Invalid SHA256 hash: ${sha256}`);
@@ -232,6 +246,7 @@ Test against real repositories:
 ### Runtime Performance
 
 Typical workflow execution:
+
 1. Version generation: < 1s
 2. Tag creation: < 2s
 3. Release creation: 2-5s
@@ -261,6 +276,7 @@ Typical workflow execution:
 ```
 
 **Why these dependencies:**
+
 - `@actions/core`: Input/output handling, logging
 - `@actions/github`: GitHub API client, context
 - `@actions/exec`: Safe command execution
@@ -277,7 +293,7 @@ Typical workflow execution:
 ### vs Manual Updates
 
 | Aspect | Manual | This Action |
-|--------|--------|-------------|
+| ------ | ------ | ----------- |
 | Time | 5-10 min | < 1 min |
 | Error-prone | Yes | No |
 | Consistency | Variable | Always |
@@ -286,6 +302,7 @@ Typical workflow execution:
 ### vs Other Actions
 
 Advantages over existing Homebrew update actions:
+
 1. Multiple version strategies
 2. Better error handling
 3. Comprehensive documentation
@@ -321,7 +338,7 @@ Advantages over existing Homebrew update actions:
 
 1. **macOS-only SHA256**: Uses `shasum` which may not be available on all systems
    - Mitigation: Run on ubuntu/macos runners
-   
+
 2. **No Bottle Updates**: Only updates source formulas
    - Future: Add bottle support
 
@@ -340,6 +357,7 @@ Advantages over existing Homebrew update actions:
 ### Monitoring
 
 Watch for:
+
 - Failed workflow runs
 - User-reported issues
 - GitHub Actions platform changes
