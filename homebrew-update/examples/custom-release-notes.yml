@@ -39,19 +39,19 @@ jobs:
           version_strategy: date-commit
           release_notes_template: |
             ## 🚀 Release {VERSION}
-            
+
             This release contains the latest updates from the project.
-            
+
             **Build Information:**
             - Commit: {COMMIT_SHA}
             - Short Hash: {COMMIT_HASH}
-            
+
             **Installation:**
             ```bash
             brew tap your-username/tools
             brew install your-formula
             ```
-            
+
             **Upgrade:**
             ```bash
             brew update

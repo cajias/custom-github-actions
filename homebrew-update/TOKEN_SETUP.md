@@ -14,11 +14,13 @@ The action requires two tokens:
 ### 1. GITHUB_TOKEN (No Setup Required)
 
 The `GITHUB_TOKEN` is automatically provided by GitHub Actions and has permissions for:
+
 - Creating releases
 - Creating tags
 - Reading repository contents
 
 **Usage in workflow:**
+
 ```yaml
 github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -29,12 +31,12 @@ This token is automatically available and requires no manual setup.
 
 You need to create a Personal Access Token (PAT) with write access to your Homebrew tap repository.
 
-#### Step-by-Step Instructions:
+#### Step-by-Step Instructions
 
-**A. Create Personal Access Token**
+##### A. Create Personal Access Token
 
 1. Go to GitHub Settings → Developer settings → Personal access tokens
-   - Direct link: https://github.com/settings/tokens
+   - Direct link: <https://github.com/settings/tokens>
 
 2. Click "Generate new token" → "Generate new token (classic)"
 
@@ -48,7 +50,7 @@ You need to create a Personal Access Token (PAT) with write access to your Homeb
 
 5. **Important**: Copy the token immediately (it won't be shown again)
 
-**B. Add Token to Source Repository Secrets**
+##### B. Add Token to Source Repository Secrets
 
 1. Go to your **source repository** (the one that will trigger updates)
    - Example: `https://github.com/your-username/your-project`
@@ -63,9 +65,10 @@ You need to create a Personal Access Token (PAT) with write access to your Homeb
 
 5. Click "Add secret"
 
-**C. Verify Token in Workflow**
+##### C. Verify Token in Workflow
 
 Use the token in your workflow:
+
 ```yaml
 - uses: cajias/custom-github-actions/homebrew-update@main
   with:
@@ -79,6 +82,7 @@ Use the token in your workflow:
 ### GITHUB_TOKEN Permissions
 
 The default `GITHUB_TOKEN` needs these permissions (automatically granted):
+
 - `contents: write` - For creating releases and tags
 - `packages: read` - For reading repository packages
 
@@ -87,6 +91,7 @@ If using GitHub's fine-grained tokens, ensure these permissions are enabled.
 ### TAP_REPO_TOKEN Permissions
 
 The Personal Access Token needs:
+
 - `repo` scope - Full control of the tap repository
   - Required for: pushing commits, updating files, managing branches
 
@@ -113,12 +118,14 @@ When rotating tokens:
 
 If you have multiple source repositories updating the same tap:
 
-**Option 1: Organization Secret**
+#### Option 1: Organization Secret
+
 - If repositories are in the same organization
 - Set the token as an organization secret
 - All repositories can use it
 
-**Option 2: Individual Secrets**
+#### Option 2: Individual Secrets
+
 - Set the token separately in each repository
 - More granular control
 - Easier to revoke access for individual repos
@@ -136,6 +143,7 @@ If you have multiple source repositories updating the same tap:
 **Cause**: Token is expired, revoked, or incorrectly copied
 
 **Solutions**:
+
 1. Check if token is still valid in GitHub settings
 2. Regenerate token if expired
 3. Verify the token was copied correctly (no extra spaces)
@@ -152,6 +160,7 @@ If you have multiple source repositories updating the same tap:
 **Cause**: Missing or incorrect token configuration
 
 **Solutions**:
+
 1. Verify `TAP_REPO_TOKEN` exists in repository secrets
 2. Check token hasn't expired
 3. Ensure token has correct permissions

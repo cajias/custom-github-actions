@@ -1,6 +1,7 @@
 # Homebrew Auto-Update Action
 
-Automatically update Homebrew formulas when your project is released. This action handles the complete workflow of creating releases and updating your Homebrew tap.
+Automatically update Homebrew formulas when your project is released. This action handles the
+complete workflow of creating releases and updating your Homebrew tap.
 
 ## Features
 
@@ -96,7 +97,7 @@ In your source repository, add these secrets:
 ### Inputs
 
 | Input | Required | Default | Description |
-|-------|----------|---------|-------------|
+| ----- | -------- | ------- | ----------- |
 | `github_token` | Yes | `${{ github.token }}` | GitHub token for creating releases |
 | `tap_repo_token` | Yes | - | Token with write access to tap repository |
 | `github_user` | Yes | - | GitHub username or organization |
@@ -111,7 +112,7 @@ In your source repository, add these secrets:
 ### Outputs
 
 | Output | Description |
-|--------|-------------|
+| ------ | ----------- |
 | `version` | Generated version string |
 | `tag` | Git tag created |
 | `release_url` | URL of the GitHub release |
@@ -240,12 +241,14 @@ If the tag already exists, the action will skip tag creation and continue with t
 ### Permission Denied
 
 Ensure your `TAP_REPO_TOKEN` has write access to the tap repository:
+
 - The token needs `repo` scope
 - The token owner must have write access to the tap repository
 
 ### SHA256 Mismatch
 
 If users report checksum mismatches:
+
 - Ensure the release is fully created before the SHA256 is calculated
 - Wait a few seconds between release creation and formula update
 - Verify the tarball URL is correct
@@ -253,6 +256,7 @@ If users report checksum mismatches:
 ### Formula Not Found
 
 Check that:
+
 - The `formula_path` is correct relative to the tap repository root
 - The formula file exists in your tap repository
 - The path uses forward slashes (even on Windows)
@@ -268,6 +272,7 @@ Check that:
 ## Real-World Example
 
 See the implementation in the [cajias/zi](https://github.com/cajias/zi) repository:
+
 - Source: `.github/workflows/update-homebrew-tap.yml`
 - Tap: [cajias/homebrew-tools](https://github.com/cajias/homebrew-tools)
 - Formula: `shell-settings.rb`
@@ -283,6 +288,7 @@ npm run all
 ```
 
 This will:
+
 1. Format code with Prettier
 2. Lint with ESLint
 3. Compile TypeScript

@@ -272,6 +272,7 @@ Quick setup:
 4. Sets project status to "Backlog"
 
 ### Subtask Management 🔍
+
 The action intelligently handles subtasks:
 
 - **Creates subtasks** for complex issues (M, L, XL size)
