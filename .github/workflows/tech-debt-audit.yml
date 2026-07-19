@@ -21,11 +21,11 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       # Local reference so the workflow tests the action at the current ref,
       # including on a PR branch before it merges.
       - uses: ./tech-debt-audit
         with:
-          path: ${{ inputs.path || '.' }}
+          path: ${{ github.event.inputs.path || '.' }}

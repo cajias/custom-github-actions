@@ -35,7 +35,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: cajias/custom-github-actions/tech-debt-audit@main
@@ -86,9 +86,11 @@ Copilot CLI needs a token with Copilot access. Two options:
   marketplaces, which is how the ponytail skill loads natively at run time.
 - The Copilot agent's shell access is a read-only allowlist (`ls`, `find`,
   `grep`, `rg`, `cat`, `head`, `tail`, `wc`, `git` minus `git push`), with
-  `gh` denied; it can only produce the report file. Issue creation happens
-  in a deterministic shell step afterward. This limits what a prompt
-  injection hidden in audited files could do.
+  `gh` denied. The `write` tool is enabled without path restriction, so the
+  agent may modify files in the workspace; it is instructed to write only the
+  report file, but this is a prompt-level constraint rather than an enforced
+  sandbox. Issue creation happens in a deterministic shell step afterward.
+  This limits what a prompt injection hidden in audited files could do.
 - Set `persist-credentials: false` on `actions/checkout` (as in the example):
   otherwise the workflow token is written into `.git/config`, where the
   audit agent could read it and leak it into the report, which becomes a
