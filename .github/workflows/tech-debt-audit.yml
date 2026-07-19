@@ -3,6 +3,10 @@
 name: Tech debt audit
 
 on:
+  # TEMP: remove before merge — lets the audit run on this PR branch, since
+  # workflow_dispatch only appears once the file is on the default branch.
+  push:
+    branches: [feat/tech-debt-audit]
   schedule:
     - cron: '0 6 * * 1' # Mondays 06:00 UTC
   workflow_dispatch:
