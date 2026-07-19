@@ -119,6 +119,13 @@ runs:
           echo "Write the full report to ${report} and nothing else."
           echo "If there is nothing to cut, the report must be exactly: Lean already. Ship."
         } > "${RUNNER_TEMP}/audit-prompt.md"
+        # Defensive: if the consumer's checkout persisted credentials, scrub
+        # them so the agent cannot read the token out of .git/config.
+        if git config --local --get-all 'http.https://github.com/.extraheader' >/dev/null 2>&1; then
+          echo "::warning::Persisted git credentials found and scrubbed." \
+            "Set persist-credentials: false on actions/checkout."
+          git config --local --unset-all 'http.https://github.com/.extraheader'
+        fi
         # Audited files are untrusted model input: shell is a read-only
         # allowlist so an injected instruction cannot curl the Copilot token
         # out or reach the GitHub API. Unlisted tools are auto-denied by
@@ -145,7 +152,7 @@ runs:
         AUDIT_PATH: ${{ inputs.path }}
       run: |
         report="${RUNNER_TEMP}/audit-report.md"
-        if grep -qi 'lean already' "$report"; then
+        if [ "$(tr -s '[:space:]' ' ' < "$report" | sed 's/^ //; s/ $//')" = "Lean already. Ship." ]; then
           echo "No findings — not creating an issue."
           echo "url=" >> "$GITHUB_OUTPUT"
           exit 0

@@ -80,6 +80,8 @@ Copilot CLI needs a token with Copilot access. Two options:
 
 - `actions/checkout` must run before this action — the audit reads the
   working tree.
+- The gate and issue steps use the GitHub CLI (`gh`), preinstalled on
+  GitHub-hosted runners. Self-hosted runners must have `gh` on the PATH.
 - Copilot CLI plugin marketplaces are compatible with Claude Code plugin
   marketplaces, which is how the ponytail skill loads natively at run time.
 - The Copilot agent's shell access is a read-only allowlist (`ls`, `find`,
