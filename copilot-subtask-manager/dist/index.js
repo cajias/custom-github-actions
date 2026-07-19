@@ -30121,7 +30121,6 @@ exports.analyzeSubtasks = analyzeSubtasks;
 exports.findNewlyReadySubtasks = findNewlyReadySubtasks;
 exports.detectCircularDependencies = detectCircularDependencies;
 const core = __importStar(__nccwpck_require__(7484));
-const subtask_discovery_1 = __nccwpck_require__(83);
 /**
  * Analyze subtasks and determine which are ready to work on
  */
@@ -30160,7 +30159,19 @@ async function analyzeSubtasks(octokit, owner, repo, subtasks) {
         // Check if all dependencies are resolved
         const unresolvedDeps = [];
         for (const depNum of subtask.dependencies) {
-            const isClosed = await (0, subtask_discovery_1.isIssueClosed)(octokit, owner, repo, depNum);
+            let isClosed = false;
+            try {
+                const { data: issue } = await octokit.rest.issues.get({
+                    owner,
+                    repo,
+                    issue_number: depNum,
+                });
+                isClosed = issue.state === "closed";
+            }
+            catch (error) {
+                core.warning(`Could not check status of issue #${depNum}: ${error}`);
+                // Assume not closed if we can't check
+            }
             if (!isClosed) {
                 unresolvedDeps.push(depNum);
             }
@@ -30514,7 +30525,6 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findSubtasks = findSubtasks;
 exports.parseDependencies = parseDependencies;
-exports.isIssueClosed = isIssueClosed;
 const core = __importStar(__nccwpck_require__(7484));
 /**
  * Find all subtasks for a given parent issue
@@ -30587,23 +30597,6 @@ function parseDependencies(body, labels) {
     }
     // Remove duplicates and return
     return [...new Set(dependencies)];
-}
-/**
- * Check if an issue is closed
- */
-async function isIssueClosed(octokit, owner, repo, issueNumber) {
-    try {
-        const { data: issue } = await octokit.rest.issues.get({
-            owner,
-            repo,
-            issue_number: issueNumber,
-        });
-        return issue.state === "closed";
-    }
-    catch (error) {
-        core.warning(`Could not check status of issue #${issueNumber}: ${error}`);
-        return false; // Assume not closed if we can't check
-    }
 }
 
 

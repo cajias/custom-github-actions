@@ -3,7 +3,7 @@
  * Supports GitHub Models, Anthropic, and OpenAI
  */
 export type ModelProvider = "github" | "anthropic" | "openai";
-export interface ModelConfig {
+interface ModelConfig {
   provider: ModelProvider;
   model: string;
   apiKey?: string;
@@ -29,3 +29,4 @@ export declare function callModel(
   userPrompt: string,
   githubToken?: string,
 ): Promise<string>;
+export {};

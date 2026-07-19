@@ -20,7 +20,15 @@ import {
   postStatusComment,
   postProgressComment,
 } from "./assignment-manager";
-import { EventContext } from "./types";
+
+interface EventContext {
+  eventName: string;
+  action: string;
+  isCopilotAssignment: boolean;
+  isSubtaskCompletion: boolean;
+  parentIssueNumber?: number;
+  completedSubtaskNumber?: number;
+}
 
 /**
  * Determine the event context and what action to take

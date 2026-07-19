@@ -7,7 +7,7 @@ import * as core from "@actions/core";
 
 export type ModelProvider = "github" | "anthropic" | "openai";
 
-export interface ModelConfig {
+interface ModelConfig {
   provider: ModelProvider;
   model: string;
   apiKey?: string;

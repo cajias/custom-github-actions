@@ -30166,12 +30166,10 @@ function validateAnalysis(analysis) {
         ],
         ["subtask_feedback", Array.isArray, "subtask_feedback must be an array"],
     ];
-    for (const [field] of fieldGuards) {
+    for (const [field, isValid, message] of fieldGuards) {
         if (!(field in analysis)) {
             throw new Error(`Missing required field in AI response: ${field}`);
         }
-    }
-    for (const [field, isValid, message] of fieldGuards) {
         if (!isValid(analysis[field])) {
             throw new Error(message);
         }
