@@ -30467,9 +30467,12 @@ async function callModel(config, systemPrompt, userPrompt, githubToken) {
         case "anthropic":
             return callAnthropicAPI(config.model, config.apiKey, systemPrompt, userPrompt);
         case "openai":
-            return callOpenAIAPI(config.model, config.apiKey, systemPrompt, userPrompt);
+            return callChatCompletionsAPI("OpenAI", "https://api.openai.com/v1/chat/completions", { Authorization: `Bearer ${config.apiKey}` }, config.model, systemPrompt, userPrompt);
         case "github":
-            return callGitHubModels(config.model, githubToken, systemPrompt, userPrompt);
+            return callChatCompletionsAPI("GitHub Models", "https://models.github.ai/inference/chat/completions", {
+                Authorization: `Bearer ${githubToken}`,
+                "X-GitHub-Api-Version": "2022-11-28",
+            }, config.model, systemPrompt, userPrompt);
         default:
             throw new Error(`Unknown provider: ${config.provider}`);
     }
@@ -30523,11 +30526,12 @@ async function callAnthropicAPI(model, apiKey, systemPrompt, userPrompt) {
     }
 }
 /**
- * Call OpenAI API (for GPT models)
+ * Call an OpenAI-compatible chat completions API
+ * (OpenAI and GitHub Models share the same request/response shape;
+ * only the endpoint and auth headers differ)
  */
-async function callOpenAIAPI(model, apiKey, systemPrompt, userPrompt) {
-    core.debug("Calling OpenAI API...");
-    const endpoint = "https://api.openai.com/v1/chat/completions";
+async function callChatCompletionsAPI(providerName, endpoint, authHeaders, model, systemPrompt, userPrompt) {
+    core.debug(`Calling ${providerName} API...`);
     const body = {
         model,
         messages: [
@@ -30548,7 +30552,7 @@ async function callOpenAIAPI(model, apiKey, systemPrompt, userPrompt) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${apiKey}`,
+                ...authHeaders,
             },
             body: JSON.stringify(body),
         });
@@ -30558,73 +30562,20 @@ async function callOpenAIAPI(model, apiKey, systemPrompt, userPrompt) {
         }
         const result = (await response.json());
         if (!result.choices || result.choices.length === 0) {
-            throw new Error("No response from OpenAI API");
+            throw new Error(`No response from ${providerName} API`);
         }
         if (!result.choices[0] ||
             !result.choices[0].message ||
             !result.choices[0].message.content) {
-            throw new Error("Invalid response structure from OpenAI API");
+            throw new Error(`Invalid response structure from ${providerName} API`);
         }
         const content = result.choices[0].message.content;
-        core.debug(`OpenAI response: ${content}`);
+        core.debug(`${providerName} response: ${content}`);
         return content;
     }
     catch (error) {
-        core.error(`OpenAI API error: ${error.message}`);
-        throw new Error(`Failed to call OpenAI API: ${error.message}`);
-    }
-}
-/**
- * Call GitHub Models API (for Grok and other free models)
- */
-async function callGitHubModels(model, githubToken, systemPrompt, userPrompt) {
-    core.debug("Calling GitHub Models API...");
-    const endpoint = "https://models.github.ai/inference/chat/completions";
-    const body = {
-        messages: [
-            {
-                role: "system",
-                content: systemPrompt,
-            },
-            {
-                role: "user",
-                content: userPrompt,
-            },
-        ],
-        model,
-        temperature: 0.3,
-        max_tokens: 2000,
-    };
-    try {
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${githubToken}`,
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
-            body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        const result = (await response.json());
-        if (!result.choices || result.choices.length === 0) {
-            throw new Error("No response from GitHub Models API");
-        }
-        if (!result.choices[0] ||
-            !result.choices[0].message ||
-            !result.choices[0].message.content) {
-            throw new Error("Invalid response structure from GitHub Models API");
-        }
-        const content = result.choices[0].message.content;
-        core.debug(`GitHub Models response: ${content}`);
-        return content;
-    }
-    catch (error) {
-        core.error(`GitHub Models API error: ${error.message}`);
-        throw new Error(`Failed to call GitHub Models API: ${error.message}`);
+        core.error(`${providerName} API error: ${error.message}`);
+        throw new Error(`Failed to call ${providerName} API: ${error.message}`);
     }
 }
 
@@ -31134,9 +31085,10 @@ async function updateProjectFields(ctx, analysis, projectConfig) {
     // Add issue to project
     const itemId = await addIssueToProject(ctx, fields.projectId);
     // Update fields
-    await updateStatus(ctx, fields, itemId, analysis.is_agent_ready);
-    await updatePriority(ctx, fields, itemId, analysis.priority);
-    await updateSize(ctx, fields, itemId, analysis.size);
+    const targetStatus = analysis.is_agent_ready ? "Ready" : "Backlog";
+    await updateField(ctx, fields, itemId, "status", targetStatus);
+    await updateField(ctx, fields, itemId, "priority", analysis.priority);
+    await updateField(ctx, fields, itemId, "size", analysis.size);
     core.info("✅ Project fields updated");
 }
 /**
@@ -31247,41 +31199,18 @@ async function addIssueToProject(ctx, projectId) {
     return itemId;
 }
 /**
- * Update Status field
+ * Update a project field to the option matching the given value
  */
-async function updateStatus(ctx, fields, itemId, isAgentReady) {
-    const targetStatus = isAgentReady ? "Ready" : "Backlog";
-    const statusOption = fields.status.options.find((o) => o.name === targetStatus);
-    if (!statusOption) {
-        core.warning(`Status option "${targetStatus}" not found`);
+async function updateField(ctx, fields, itemId, fieldName, value) {
+    const field = fields[fieldName];
+    const option = field.options.find((o) => o.name === value);
+    if (!option) {
+        const label = fieldName[0].toUpperCase() + fieldName.slice(1);
+        core.warning(`${label} option "${value}" not found`);
         return;
     }
-    await updateSingleSelectField(ctx, fields.projectId, itemId, fields.status.id, statusOption.id);
-    core.info(`Set status to: ${targetStatus}`);
-}
-/**
- * Update Priority field
- */
-async function updatePriority(ctx, fields, itemId, priority) {
-    const priorityOption = fields.priority.options.find((o) => o.name === priority);
-    if (!priorityOption) {
-        core.warning(`Priority option "${priority}" not found`);
-        return;
-    }
-    await updateSingleSelectField(ctx, fields.projectId, itemId, fields.priority.id, priorityOption.id);
-    core.info(`Set priority to: ${priority}`);
-}
-/**
- * Update Size field
- */
-async function updateSize(ctx, fields, itemId, size) {
-    const sizeOption = fields.size.options.find((o) => o.name === size);
-    if (!sizeOption) {
-        core.warning(`Size option "${size}" not found`);
-        return;
-    }
-    await updateSingleSelectField(ctx, fields.projectId, itemId, fields.size.id, sizeOption.id);
-    core.info(`Set size to: ${size}`);
+    await updateSingleSelectField(ctx, fields.projectId, itemId, field.id, option.id);
+    core.info(`Set ${fieldName} to: ${value}`);
 }
 /**
  * Update a single select field (generic helper)

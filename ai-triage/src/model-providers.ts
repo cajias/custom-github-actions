@@ -91,16 +91,23 @@ export async function callModel(
         userPrompt,
       );
     case "openai":
-      return callOpenAIAPI(
+      return callChatCompletionsAPI(
+        "OpenAI",
+        "https://api.openai.com/v1/chat/completions",
+        { Authorization: `Bearer ${config.apiKey!}` },
         config.model,
-        config.apiKey!,
         systemPrompt,
         userPrompt,
       );
     case "github":
-      return callGitHubModels(
+      return callChatCompletionsAPI(
+        "GitHub Models",
+        "https://models.github.ai/inference/chat/completions",
+        {
+          Authorization: `Bearer ${githubToken!}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
         config.model,
-        githubToken!,
         systemPrompt,
         userPrompt,
       );
@@ -172,17 +179,19 @@ async function callAnthropicAPI(
 }
 
 /**
- * Call OpenAI API (for GPT models)
+ * Call an OpenAI-compatible chat completions API
+ * (OpenAI and GitHub Models share the same request/response shape;
+ * only the endpoint and auth headers differ)
  */
-async function callOpenAIAPI(
+async function callChatCompletionsAPI(
+  providerName: string,
+  endpoint: string,
+  authHeaders: Record<string, string>,
   model: string,
-  apiKey: string,
   systemPrompt: string,
   userPrompt: string,
 ): Promise<string> {
-  core.debug("Calling OpenAI API...");
-
-  const endpoint = "https://api.openai.com/v1/chat/completions";
+  core.debug(`Calling ${providerName} API...`);
 
   const body = {
     model,
@@ -205,7 +214,7 @@ async function callOpenAIAPI(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        ...authHeaders,
       },
       body: JSON.stringify(body),
     });
@@ -218,7 +227,7 @@ async function callOpenAIAPI(
     const result = (await response.json()) as any;
 
     if (!result.choices || result.choices.length === 0) {
-      throw new Error("No response from OpenAI API");
+      throw new Error(`No response from ${providerName} API`);
     }
 
     if (
@@ -226,84 +235,15 @@ async function callOpenAIAPI(
       !result.choices[0].message ||
       !result.choices[0].message.content
     ) {
-      throw new Error("Invalid response structure from OpenAI API");
+      throw new Error(`Invalid response structure from ${providerName} API`);
     }
 
     const content = result.choices[0].message.content;
-    core.debug(`OpenAI response: ${content}`);
+    core.debug(`${providerName} response: ${content}`);
 
     return content;
   } catch (error: any) {
-    core.error(`OpenAI API error: ${error.message}`);
-    throw new Error(`Failed to call OpenAI API: ${error.message}`);
-  }
-}
-
-/**
- * Call GitHub Models API (for Grok and other free models)
- */
-async function callGitHubModels(
-  model: string,
-  githubToken: string,
-  systemPrompt: string,
-  userPrompt: string,
-): Promise<string> {
-  core.debug("Calling GitHub Models API...");
-
-  const endpoint = "https://models.github.ai/inference/chat/completions";
-
-  const body = {
-    messages: [
-      {
-        role: "system",
-        content: systemPrompt,
-      },
-      {
-        role: "user",
-        content: userPrompt,
-      },
-    ],
-    model,
-    temperature: 0.3,
-    max_tokens: 2000,
-  };
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${githubToken}`,
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-
-    const result = (await response.json()) as any;
-
-    if (!result.choices || result.choices.length === 0) {
-      throw new Error("No response from GitHub Models API");
-    }
-
-    if (
-      !result.choices[0] ||
-      !result.choices[0].message ||
-      !result.choices[0].message.content
-    ) {
-      throw new Error("Invalid response structure from GitHub Models API");
-    }
-
-    const content = result.choices[0].message.content;
-    core.debug(`GitHub Models response: ${content}`);
-
-    return content;
-  } catch (error: any) {
-    core.error(`GitHub Models API error: ${error.message}`);
-    throw new Error(`Failed to call GitHub Models API: ${error.message}`);
+    core.error(`${providerName} API error: ${error.message}`);
+    throw new Error(`Failed to call ${providerName} API: ${error.message}`);
   }
 }

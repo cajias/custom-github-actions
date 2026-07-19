@@ -28,9 +28,10 @@ export async function updateProjectFields(
   const itemId = await addIssueToProject(ctx, fields.projectId);
 
   // Update fields
-  await updateStatus(ctx, fields, itemId, analysis.is_agent_ready);
-  await updatePriority(ctx, fields, itemId, analysis.priority);
-  await updateSize(ctx, fields, itemId, analysis.size);
+  const targetStatus = analysis.is_agent_ready ? "Ready" : "Backlog";
+  await updateField(ctx, fields, itemId, "status", targetStatus);
+  await updateField(ctx, fields, itemId, "priority", analysis.priority);
+  await updateField(ctx, fields, itemId, "size", analysis.size);
 
   core.info("✅ Project fields updated");
 }
@@ -180,21 +181,21 @@ async function addIssueToProject(
 }
 
 /**
- * Update Status field
+ * Update a project field to the option matching the given value
  */
-async function updateStatus(
+async function updateField(
   ctx: ActionContext,
   fields: ProjectFields,
   itemId: string,
-  isAgentReady: boolean,
+  fieldName: "status" | "priority" | "size",
+  value: string,
 ): Promise<void> {
-  const targetStatus = isAgentReady ? "Ready" : "Backlog";
-  const statusOption = fields.status.options.find(
-    (o) => o.name === targetStatus,
-  );
+  const field = fields[fieldName];
+  const option = field.options.find((o) => o.name === value);
 
-  if (!statusOption) {
-    core.warning(`Status option "${targetStatus}" not found`);
+  if (!option) {
+    const label = fieldName[0].toUpperCase() + fieldName.slice(1);
+    core.warning(`${label} option "${value}" not found`);
     return;
   }
 
@@ -202,67 +203,11 @@ async function updateStatus(
     ctx,
     fields.projectId,
     itemId,
-    fields.status.id,
-    statusOption.id,
+    field.id,
+    option.id,
   );
 
-  core.info(`Set status to: ${targetStatus}`);
-}
-
-/**
- * Update Priority field
- */
-async function updatePriority(
-  ctx: ActionContext,
-  fields: ProjectFields,
-  itemId: string,
-  priority: string,
-): Promise<void> {
-  const priorityOption = fields.priority.options.find(
-    (o) => o.name === priority,
-  );
-
-  if (!priorityOption) {
-    core.warning(`Priority option "${priority}" not found`);
-    return;
-  }
-
-  await updateSingleSelectField(
-    ctx,
-    fields.projectId,
-    itemId,
-    fields.priority.id,
-    priorityOption.id,
-  );
-
-  core.info(`Set priority to: ${priority}`);
-}
-
-/**
- * Update Size field
- */
-async function updateSize(
-  ctx: ActionContext,
-  fields: ProjectFields,
-  itemId: string,
-  size: string,
-): Promise<void> {
-  const sizeOption = fields.size.options.find((o) => o.name === size);
-
-  if (!sizeOption) {
-    core.warning(`Size option "${size}" not found`);
-    return;
-  }
-
-  await updateSingleSelectField(
-    ctx,
-    fields.projectId,
-    itemId,
-    fields.size.id,
-    sizeOption.id,
-  );
-
-  core.info(`Set size to: ${size}`);
+  core.info(`Set ${fieldName} to: ${value}`);
 }
 
 /**
