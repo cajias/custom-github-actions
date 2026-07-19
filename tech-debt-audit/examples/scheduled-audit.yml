@@ -1,0 +1,24 @@
+# Example: weekly tech debt audit that files an issue with findings.
+# A new audit only runs once the previous audit's issue has been closed.
+name: Tech debt audit
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  copilot-requests: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: cajias/custom-github-actions/tech-debt-audit@main
+        with:
+          path: '.'

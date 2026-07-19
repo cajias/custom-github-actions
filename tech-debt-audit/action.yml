@@ -1,0 +1,159 @@
+name: 'Tech Debt Audit'
+description: >-
+  Scheduled over-engineering audit. Installs the ponytail plugin from its
+  marketplace and runs its ponytail-audit skill via GitHub Copilot CLI
+  (Claude), filing an issue with the findings. Skips while a previous
+  audit issue is still open.
+author: 'cajias'
+
+branding:
+  icon: 'scissors'
+  color: 'purple'
+
+inputs:
+  path:
+    description: 'Directory to audit, relative to the repository root'
+    required: false
+    default: '.'
+  copilot_token:
+    description: >-
+      Token for Copilot CLI auth. Defaults to the workflow GITHUB_TOKEN, which
+      requires the copilot-requests: write permission and the "Copilot in
+      Actions" org/repo policy. Pass a fine-grained PAT with the "Copilot
+      Requests" permission to bill a specific user's seat instead.
+    required: false
+    default: ${{ github.token }}
+  github_token:
+    description: 'Token for issue operations (needs issues: write)'
+    required: false
+    default: ${{ github.token }}
+  issue_label:
+    description: >-
+      Label that marks audit issues. An open issue with this label means the
+      previous audit is unresolved, so the run is skipped.
+    required: false
+    default: 'tech-debt-audit'
+  model:
+    description: 'Copilot model to use'
+    required: false
+    default: 'claude-sonnet-4.6'
+  skill_marketplace:
+    description: 'OWNER/REPO of the plugin marketplace that ships the audit skill'
+    required: false
+    default: 'DietrichGebert/ponytail'
+  skill_plugin:
+    description: 'Plugin to install from the marketplace, as PLUGIN@MARKETPLACE'
+    required: false
+    default: 'ponytail@ponytail'
+  skill_name:
+    description: 'Skill the audit prompt invokes'
+    required: false
+    default: 'ponytail-audit'
+
+outputs:
+  skipped:
+    description: 'true when a previous audit issue is still open and the audit did not run'
+    value: ${{ steps.gate.outputs.skipped }}
+  issue_url:
+    description: 'URL of the created issue; empty when skipped or when there were no findings'
+    value: ${{ steps.issue.outputs.url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Skip if previous audit issue is still open
+      id: gate
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        GH_REPO: ${{ github.repository }}
+        LABEL: ${{ inputs.issue_label }}
+      run: |
+        open=$(gh issue list --label "$LABEL" --state open --json number --jq 'length')
+        if [ "$open" -gt 0 ]; then
+          echo "Open '$LABEL' issue exists — skipping audit until it is closed."
+          echo "skipped=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Set up Node.js
+      if: steps.gate.outputs.skipped == 'false'
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    # Official install path per GitHub's automation docs; no GitHub-owned
+    # setup action exists for Copilot CLI as of 2026-07.
+    - name: Install Copilot CLI
+      if: steps.gate.outputs.skipped == 'false'
+      shell: bash
+      run: npm install -g @github/copilot
+
+    - name: Install audit skill from its marketplace
+      if: steps.gate.outputs.skipped == 'false'
+      shell: bash
+      env:
+        COPILOT_GITHUB_TOKEN: ${{ inputs.copilot_token }}
+        MARKETPLACE: ${{ inputs.skill_marketplace }}
+        PLUGIN: ${{ inputs.skill_plugin }}
+      run: |
+        copilot plugin marketplace add "$MARKETPLACE"
+        copilot plugin install "$PLUGIN"
+
+    - name: Run tech debt audit
+      if: steps.gate.outputs.skipped == 'false'
+      shell: bash
+      env:
+        COPILOT_GITHUB_TOKEN: ${{ inputs.copilot_token }}
+        AUDIT_PATH: ${{ inputs.path }}
+        COPILOT_MODEL: ${{ inputs.model }}
+        SKILL: ${{ inputs.skill_name }}
+      run: |
+        report="${RUNNER_TEMP}/audit-report.md"
+        {
+          echo "Use the ${SKILL} skill to run a whole-repo over-engineering audit."
+          echo "Audit scope: only files under '${AUDIT_PATH}' in this repository."
+          echo "Skip vendored code, lockfiles, node_modules, dist/, build output, and generated files."
+          echo "List findings, change nothing in the repository."
+          echo "Write the full report to ${report} and nothing else."
+          echo "If there is nothing to cut, the report must be exactly: Lean already. Ship."
+        } > "${RUNNER_TEMP}/audit-prompt.md"
+        # Audited files are untrusted model input: shell is a read-only
+        # allowlist so an injected instruction cannot curl the Copilot token
+        # out or reach the GitHub API. Unlisted tools are auto-denied by
+        # --no-ask-user; deny beats allow even if the list is widened later.
+        copilot -p "$(cat "${RUNNER_TEMP}/audit-prompt.md")" \
+          --allow-tool=read \
+          --allow-tool=write \
+          --allow-tool='shell(ls:*),shell(find:*),shell(grep:*),shell(rg:*)' \
+          --allow-tool='shell(cat:*),shell(head:*),shell(tail:*),shell(wc:*),shell(git:*)' \
+          --deny-tool='shell(git push)' \
+          --deny-tool='shell(gh:*)' \
+          --no-ask-user
+        # Fail loudly if the agent did not produce a report
+        test -s "$report"
+
+    - name: Create issue from findings
+      id: issue
+      if: steps.gate.outputs.skipped == 'false'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        GH_REPO: ${{ github.repository }}
+        LABEL: ${{ inputs.issue_label }}
+        AUDIT_PATH: ${{ inputs.path }}
+      run: |
+        report="${RUNNER_TEMP}/audit-report.md"
+        if grep -qi 'lean already' "$report"; then
+          echo "No findings — not creating an issue."
+          echo "url=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        gh label create "$LABEL" --description "Automated tech debt audit" --force
+        url=$(gh issue create \
+          --title "Tech debt audit: findings in ${AUDIT_PATH}" \
+          --label "$LABEL" \
+          --body-file "$report")
+        echo "url=$url" >> "$GITHUB_OUTPUT"
+        echo "Created $url"
