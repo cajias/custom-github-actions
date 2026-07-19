@@ -113,7 +113,7 @@ runs:
         report="${RUNNER_TEMP}/audit-report.md"
         {
           echo "Use the ${SKILL} skill to run a whole-repo over-engineering audit."
-          echo "Audit scope: only files under '${AUDIT_PATH}' in this repository."
+          echo "Audit scope: only files under the current directory."
           echo "Skip vendored code, lockfiles, node_modules, dist/, build output, and generated files."
           echo "List findings, change nothing in the repository."
           echo "Write the full report to ${report} and nothing else."
@@ -130,23 +130,33 @@ runs:
         # allowlist so an injected instruction cannot curl the Copilot token
         # out or reach the GitHub API. Unlisted tools are auto-denied by
         # --no-ask-user; deny beats allow even if the list is widened later.
-        copilot -p "$(cat "${RUNNER_TEMP}/audit-prompt.md")" \
-          --allow-tool=read \
-          --allow-tool=write \
-          --allow-tool='shell(ls:*)' \
-          --allow-tool='shell(find:*)' \
-          --allow-tool='shell(grep:*)' \
-          --allow-tool='shell(rg:*)' \
-          --allow-tool='shell(cat:*)' \
-          --allow-tool='shell(head:*)' \
-          --allow-tool='shell(tail:*)' \
-          --allow-tool='shell(wc:*)' \
-          --allow-tool='shell(git:*)' \
-          --deny-tool='shell(git push)' \
-          --deny-tool='shell(gh:*)' \
-          --no-ask-user
+        # Run from within the audit path so relative-path shell calls are
+        # naturally scoped to that subtree, reducing prompt-injection risk.
+        (
+          cd "${AUDIT_PATH}"
+          copilot -p "$(cat "${RUNNER_TEMP}/audit-prompt.md")" \
+            --allow-tool=read \
+            --allow-tool=write \
+            --allow-tool='shell(ls:*)' \
+            --allow-tool='shell(find:*)' \
+            --allow-tool='shell(grep:*)' \
+            --allow-tool='shell(rg:*)' \
+            --allow-tool='shell(cat:*)' \
+            --allow-tool='shell(head:*)' \
+            --allow-tool='shell(tail:*)' \
+            --allow-tool='shell(wc:*)' \
+            --allow-tool='shell(git:*)' \
+            --deny-tool='shell(git push)' \
+            --deny-tool='shell(gh:*)' \
+            --no-ask-user
+        )
         # Fail loudly if the agent did not produce a report
         test -s "$report"
+        # Fail the run if the agent modified the working tree
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "::error::Agent modified the working tree; failing the run."
+          exit 1
+        fi
 
     - name: Create issue from findings
       id: issue
