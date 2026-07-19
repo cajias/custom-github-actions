@@ -33,16 +33,12 @@ export async function createRelease(
   });
 
   const releaseUrl = response.data.html_url;
-  const tarballUrl =
-    response.data.tarball_url ||
-    `https://github.com/${owner}/${repo}/archive/refs/tags/${tagName}.tar.gz`;
 
   core.info(`Release created: ${releaseUrl}`);
 
   return {
     tagName,
     releaseUrl,
-    tarballUrl,
   };
 }
 

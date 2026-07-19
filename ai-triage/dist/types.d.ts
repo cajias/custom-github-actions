@@ -97,7 +97,6 @@ export interface ProjectSingleSelectField {
 export interface ProjectConfig {
   owner: string;
   number: number;
-  id?: string;
 }
 /**
  * Action context

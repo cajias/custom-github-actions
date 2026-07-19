@@ -5,7 +5,10 @@ import { VersionInfo } from "./types";
 /**
  * Generate version based on the specified strategy
  */
-export declare function generateVersion(strategy: "date-commit" | "semver" | "custom", customVersion?: string): Promise<VersionInfo>;
+export declare function generateVersion(
+  strategy: "date-commit" | "semver" | "custom",
+  customVersion?: string,
+): Promise<VersionInfo>;
 /**
  * Check if a git tag already exists
  */

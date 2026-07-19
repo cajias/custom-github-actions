@@ -29972,7 +29972,6 @@ const core = __importStar(__nccwpck_require__(7484));
  * Assign Copilot to multiple subtasks
  */
 async function assignCopilotToSubtasks(octokit, owner, repo, assignee, subtasks) {
-    const results = [];
     for (const subtask of subtasks) {
         try {
             await octokit.rest.issues.addAssignees({
@@ -29982,18 +29981,11 @@ async function assignCopilotToSubtasks(octokit, owner, repo, assignee, subtasks)
                 assignees: [assignee],
             });
             core.info(`✓ Assigned ${assignee} to subtask #${subtask.number}`);
-            results.push({ number: subtask.number, success: true });
         }
         catch (error) {
             core.error(`✗ Failed to assign ${assignee} to subtask #${subtask.number}: ${error.message}`);
-            results.push({
-                number: subtask.number,
-                success: false,
-                error: error.message,
-            });
         }
     }
-    return results;
 }
 /**
  * Post a status comment on the parent issue

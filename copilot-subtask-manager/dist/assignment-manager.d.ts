@@ -2,7 +2,7 @@
  * Copilot assignment management
  */
 import * as github from "@actions/github";
-import { SubtaskAnalysis, AssignmentResult } from "./types";
+import { SubtaskAnalysis } from "./types";
 /**
  * Assign Copilot to multiple subtasks
  */
@@ -12,7 +12,7 @@ export declare function assignCopilotToSubtasks(
   repo: string,
   assignee: string,
   subtasks: SubtaskAnalysis[],
-): Promise<AssignmentResult[]>;
+): Promise<void>;
 /**
  * Post a status comment on the parent issue
  */

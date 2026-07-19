@@ -30118,30 +30118,25 @@ const version_1 = __nccwpck_require__(311);
 const release_1 = __nccwpck_require__(4202);
 const formula_1 = __nccwpck_require__(6517);
 /**
- * Get and validate action inputs
- */
-function getInputs() {
-    return {
-        githubToken: core.getInput("github_token", { required: true }),
-        tapRepoToken: core.getInput("tap_repo_token", { required: true }),
-        githubUser: core.getInput("github_user", { required: true }),
-        sourceRepo: core.getInput("source_repo", { required: true }),
-        tapRepo: core.getInput("tap_repo", { required: true }),
-        formulaName: core.getInput("formula_name", { required: true }),
-        formulaPath: core.getInput("formula_path", { required: true }),
-        versionStrategy: core.getInput("version_strategy", { required: false }) || "date-commit",
-        customVersion: core.getInput("custom_version", { required: false }) || undefined,
-        releaseNotesTemplate: core.getInput("release_notes_template", { required: false }) || undefined,
-    };
-}
-/**
  * Main action execution
  */
 async function run() {
     try {
         core.info("🍺 Starting Homebrew Auto-Update Action");
-        // Get inputs
-        const inputs = getInputs();
+        // Get and validate action inputs
+        const inputs = {
+            githubToken: core.getInput("github_token", { required: true }),
+            tapRepoToken: core.getInput("tap_repo_token", { required: true }),
+            githubUser: core.getInput("github_user", { required: true }),
+            sourceRepo: core.getInput("source_repo", { required: true }),
+            tapRepo: core.getInput("tap_repo", { required: true }),
+            formulaName: core.getInput("formula_name", { required: true }),
+            formulaPath: core.getInput("formula_path", { required: true }),
+            versionStrategy: core.getInput("version_strategy", { required: false }) || "date-commit",
+            customVersion: core.getInput("custom_version", { required: false }) || undefined,
+            releaseNotesTemplate: core.getInput("release_notes_template", { required: false }) ||
+                undefined,
+        };
         core.info(`Repository: ${inputs.githubUser}/${inputs.sourceRepo}`);
         core.info(`Tap: ${inputs.githubUser}/${inputs.tapRepo}`);
         core.info(`Formula: ${inputs.formulaName}`);
@@ -30278,13 +30273,10 @@ async function createRelease(token, owner, repo, tagName, releaseName, body, com
         generate_release_notes: true,
     });
     const releaseUrl = response.data.html_url;
-    const tarballUrl = response.data.tarball_url ||
-        `https://github.com/${owner}/${repo}/archive/refs/tags/${tagName}.tar.gz`;
     core.info(`Release created: ${releaseUrl}`);
     return {
         tagName,
         releaseUrl,
-        tarballUrl,
     };
 }
 /**
@@ -30368,14 +30360,10 @@ async function getCommitHash() {
     return output.trim();
 }
 /**
- * Get the current date in YYYYMMDD format
+ * Get the current date (UTC) in YYYYMMDD format
  */
 function getCurrentDate() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}${month}${day}`;
+    return new Date().toISOString().slice(0, 10).replace(/-/g, "");
 }
 /**
  * Get the latest semver tag from git

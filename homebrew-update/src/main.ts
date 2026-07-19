@@ -12,7 +12,6 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import * as path from "path";
-import { ActionInputs } from "./types";
 import { generateVersion, tagExists, createTag, pushTag } from "./version";
 import { createRelease, generateReleaseNotes } from "./release";
 import {
@@ -23,38 +22,32 @@ import {
 } from "./formula";
 
 /**
- * Get and validate action inputs
- */
-function getInputs(): ActionInputs {
-  return {
-    githubToken: core.getInput("github_token", { required: true }),
-    tapRepoToken: core.getInput("tap_repo_token", { required: true }),
-    githubUser: core.getInput("github_user", { required: true }),
-    sourceRepo: core.getInput("source_repo", { required: true }),
-    tapRepo: core.getInput("tap_repo", { required: true }),
-    formulaName: core.getInput("formula_name", { required: true }),
-    formulaPath: core.getInput("formula_path", { required: true }),
-    versionStrategy:
-      (core.getInput("version_strategy", { required: false }) as
-        | "date-commit"
-        | "semver"
-        | "custom") || "date-commit",
-    customVersion:
-      core.getInput("custom_version", { required: false }) || undefined,
-    releaseNotesTemplate:
-      core.getInput("release_notes_template", { required: false }) || undefined,
-  };
-}
-
-/**
  * Main action execution
  */
 async function run(): Promise<void> {
   try {
     core.info("🍺 Starting Homebrew Auto-Update Action");
 
-    // Get inputs
-    const inputs = getInputs();
+    // Get and validate action inputs
+    const inputs = {
+      githubToken: core.getInput("github_token", { required: true }),
+      tapRepoToken: core.getInput("tap_repo_token", { required: true }),
+      githubUser: core.getInput("github_user", { required: true }),
+      sourceRepo: core.getInput("source_repo", { required: true }),
+      tapRepo: core.getInput("tap_repo", { required: true }),
+      formulaName: core.getInput("formula_name", { required: true }),
+      formulaPath: core.getInput("formula_path", { required: true }),
+      versionStrategy:
+        (core.getInput("version_strategy", { required: false }) as
+          | "date-commit"
+          | "semver"
+          | "custom") || "date-commit",
+      customVersion:
+        core.getInput("custom_version", { required: false }) || undefined,
+      releaseNotesTemplate:
+        core.getInput("release_notes_template", { required: false }) ||
+        undefined,
+    };
     core.info(`Repository: ${inputs.githubUser}/${inputs.sourceRepo}`);
     core.info(`Tap: ${inputs.githubUser}/${inputs.tapRepo}`);
     core.info(`Formula: ${inputs.formulaName}`);

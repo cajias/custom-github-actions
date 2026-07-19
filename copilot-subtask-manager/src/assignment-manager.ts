@@ -4,7 +4,7 @@
 
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import { SubtaskAnalysis, AssignmentResult } from "./types";
+import { SubtaskAnalysis } from "./types";
 
 /**
  * Assign Copilot to multiple subtasks
@@ -15,9 +15,7 @@ export async function assignCopilotToSubtasks(
   repo: string,
   assignee: string,
   subtasks: SubtaskAnalysis[],
-): Promise<AssignmentResult[]> {
-  const results: AssignmentResult[] = [];
-
+): Promise<void> {
   for (const subtask of subtasks) {
     try {
       await octokit.rest.issues.addAssignees({
@@ -28,20 +26,12 @@ export async function assignCopilotToSubtasks(
       });
 
       core.info(`✓ Assigned ${assignee} to subtask #${subtask.number}`);
-      results.push({ number: subtask.number, success: true });
     } catch (error: any) {
       core.error(
         `✗ Failed to assign ${assignee} to subtask #${subtask.number}: ${error.message}`,
       );
-      results.push({
-        number: subtask.number,
-        success: false,
-        error: error.message,
-      });
     }
   }
-
-  return results;
 }
 
 /**

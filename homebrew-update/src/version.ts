@@ -22,14 +22,10 @@ async function getCommitHash(): Promise<string> {
 }
 
 /**
- * Get the current date in YYYYMMDD format
+ * Get the current date (UTC) in YYYYMMDD format
  */
 function getCurrentDate(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}${month}${day}`;
+  return new Date().toISOString().slice(0, 10).replace(/-/g, "");
 }
 
 /**

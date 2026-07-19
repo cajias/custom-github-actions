@@ -209,64 +209,53 @@ function parseAIResponse(response: string): TriageAnalysis {
  * Validate that the analysis has all required fields
  */
 function validateAnalysis(analysis: any): asserts analysis is TriageAnalysis {
-  const requiredFields = [
-    "is_agent_ready",
-    "labels",
-    "priority",
-    "size",
-    "related_issues",
-    "clarifying_questions",
-    "reasoning",
-    "needs_subtasks",
-    "subtasks_to_create",
-    "subtask_feedback",
+  const fieldGuards: Array<[string, (value: any) => boolean, string]> = [
+    [
+      "is_agent_ready",
+      (v) => typeof v === "boolean",
+      "is_agent_ready must be a boolean",
+    ],
+    ["labels", Array.isArray, "labels must be an array"],
+    [
+      "priority",
+      (v) => ["P0", "P1", "P2"].includes(v),
+      "priority must be P0, P1, or P2",
+    ],
+    [
+      "size",
+      (v) => ["XS", "S", "M", "L", "XL"].includes(v),
+      "size must be XS, S, M, L, or XL",
+    ],
+    ["related_issues", Array.isArray, "related_issues must be an array"],
+    [
+      "clarifying_questions",
+      Array.isArray,
+      "clarifying_questions must be an array",
+    ],
+    ["reasoning", (v) => typeof v === "string", "reasoning must be a string"],
+    [
+      "needs_subtasks",
+      (v) => typeof v === "boolean",
+      "needs_subtasks must be a boolean",
+    ],
+    [
+      "subtasks_to_create",
+      Array.isArray,
+      "subtasks_to_create must be an array",
+    ],
+    ["subtask_feedback", Array.isArray, "subtask_feedback must be an array"],
   ];
 
-  for (const field of requiredFields) {
+  for (const [field] of fieldGuards) {
     if (!(field in analysis)) {
       throw new Error(`Missing required field in AI response: ${field}`);
     }
   }
 
-  // Validate types
-  if (typeof analysis.is_agent_ready !== "boolean") {
-    throw new Error("is_agent_ready must be a boolean");
-  }
-
-  if (!Array.isArray(analysis.labels)) {
-    throw new Error("labels must be an array");
-  }
-
-  if (!["P0", "P1", "P2"].includes(analysis.priority)) {
-    throw new Error("priority must be P0, P1, or P2");
-  }
-
-  if (!["XS", "S", "M", "L", "XL"].includes(analysis.size)) {
-    throw new Error("size must be XS, S, M, L, or XL");
-  }
-
-  if (!Array.isArray(analysis.related_issues)) {
-    throw new Error("related_issues must be an array");
-  }
-
-  if (!Array.isArray(analysis.clarifying_questions)) {
-    throw new Error("clarifying_questions must be an array");
-  }
-
-  if (typeof analysis.reasoning !== "string") {
-    throw new Error("reasoning must be a string");
-  }
-
-  if (typeof analysis.needs_subtasks !== "boolean") {
-    throw new Error("needs_subtasks must be a boolean");
-  }
-
-  if (!Array.isArray(analysis.subtasks_to_create)) {
-    throw new Error("subtasks_to_create must be an array");
-  }
-
-  if (!Array.isArray(analysis.subtask_feedback)) {
-    throw new Error("subtask_feedback must be an array");
+  for (const [field, isValid, message] of fieldGuards) {
+    if (!isValid(analysis[field])) {
+      throw new Error(message);
+    }
   }
 
   // Validate subtask structure
