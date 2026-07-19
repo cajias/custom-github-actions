@@ -29,7 +29,7 @@
     {
       "files": ["homebrew-update/**/*.ts"],
       "parserOptions": {
-        "project": "./tsconfig.json"
+        "project": "./homebrew-update/tsconfig.json"
       }
     }
   ]

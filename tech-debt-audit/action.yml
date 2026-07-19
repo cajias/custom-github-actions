@@ -133,8 +133,15 @@ runs:
         copilot -p "$(cat "${RUNNER_TEMP}/audit-prompt.md")" \
           --allow-tool=read \
           --allow-tool=write \
-          --allow-tool='shell(ls:*),shell(find:*),shell(grep:*),shell(rg:*)' \
-          --allow-tool='shell(cat:*),shell(head:*),shell(tail:*),shell(wc:*),shell(git:*)' \
+          --allow-tool='shell(ls:*)' \
+          --allow-tool='shell(find:*)' \
+          --allow-tool='shell(grep:*)' \
+          --allow-tool='shell(rg:*)' \
+          --allow-tool='shell(cat:*)' \
+          --allow-tool='shell(head:*)' \
+          --allow-tool='shell(tail:*)' \
+          --allow-tool='shell(wc:*)' \
+          --allow-tool='shell(git:*)' \
           --deny-tool='shell(git push)' \
           --deny-tool='shell(gh:*)' \
           --no-ask-user
