@@ -5,7 +5,6 @@
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
 import * as fs from "fs";
-import { FormulaUpdate } from "./types";
 
 /**
  * Calculate SHA256 hash of a file from URL
@@ -46,7 +45,7 @@ export async function calculateSHA256(url: string): Promise<string> {
  */
 export async function updateFormula(
   formulaPath: string,
-  update: FormulaUpdate,
+  update: { version: string; url: string; sha256: string },
 ): Promise<void> {
   core.info(`Updating formula at: ${formulaPath}`);
 

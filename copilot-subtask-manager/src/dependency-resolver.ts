@@ -5,7 +5,6 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Subtask, SubtaskAnalysis } from "./types";
-import { isIssueClosed } from "./subtask-discovery";
 
 /**
  * Analyze subtasks and determine which are ready to work on
@@ -54,7 +53,18 @@ export async function analyzeSubtasks(
     // Check if all dependencies are resolved
     const unresolvedDeps: number[] = [];
     for (const depNum of subtask.dependencies) {
-      const isClosed = await isIssueClosed(octokit, owner, repo, depNum);
+      let isClosed = false;
+      try {
+        const { data: issue } = await octokit.rest.issues.get({
+          owner,
+          repo,
+          issue_number: depNum,
+        });
+        isClosed = issue.state === "closed";
+      } catch (error) {
+        core.warning(`Could not check status of issue #${depNum}: ${error}`);
+        // Assume not closed if we can't check
+      }
       if (!isClosed) {
         unresolvedDeps.push(depNum);
       }

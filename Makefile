@@ -30,10 +30,16 @@ lint-markdown: ## Lint Markdown files
 	@echo "Running markdownlint..."
 	@markdownlint '**/*.md' --config .markdownlint.json
 
-lint-ts: ## Lint TypeScript code in ai-triage
+lint-ts: ## Lint TypeScript code in all actions
 	@echo "Running ESLint and Prettier for ai-triage..."
 	@cd ai-triage && npm run lint
 	@cd ai-triage && npx prettier --check '**/*.ts'
+	@echo "Running ESLint and Prettier for copilot-subtask-manager..."
+	@cd copilot-subtask-manager && npm run lint
+	@cd copilot-subtask-manager && npx prettier --check '**/*.ts'
+	@echo "Running ESLint and Prettier for homebrew-update..."
+	@cd homebrew-update && npm run lint
+	@cd homebrew-update && npx prettier --check '**/*.ts'
 
 fix: ## Auto-fix linting issues where possible
 	@echo "Auto-fixing linting issues..."
@@ -60,4 +66,14 @@ clean: ## Clean build artifacts
 build-ai-triage: ## Build ai-triage action
 	@echo "Building ai-triage action..."
 	@cd ai-triage && npm run all
+	@echo "✅ Build complete"
+
+build-copilot-subtask-manager: ## Build copilot-subtask-manager action
+	@echo "Building copilot-subtask-manager action..."
+	@cd copilot-subtask-manager && npm run all
+	@echo "✅ Build complete"
+
+build-homebrew-update: ## Build homebrew-update action
+	@echo "Building homebrew-update action..."
+	@cd homebrew-update && npm run all
 	@echo "✅ Build complete"

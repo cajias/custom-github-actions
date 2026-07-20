@@ -104,25 +104,3 @@ export function parseDependencies(body: string, labels: string[]): number[] {
   // Remove duplicates and return
   return [...new Set(dependencies)];
 }
-
-/**
- * Check if an issue is closed
- */
-export async function isIssueClosed(
-  octokit: ReturnType<typeof github.getOctokit>,
-  owner: string,
-  repo: string,
-  issueNumber: number,
-): Promise<boolean> {
-  try {
-    const { data: issue } = await octokit.rest.issues.get({
-      owner,
-      repo,
-      issue_number: issueNumber,
-    });
-    return issue.state === "closed";
-  } catch (error) {
-    core.warning(`Could not check status of issue #${issueNumber}: ${error}`);
-    return false; // Assume not closed if we can't check
-  }
-}

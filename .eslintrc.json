@@ -24,5 +24,13 @@
     "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
     "filenames/match-regex": "off",
     "camelcase": "off"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["homebrew-update/**/*.ts"],
+      "parserOptions": {
+        "project": "./homebrew-update/tsconfig.json"
+      }
+    }
+  ]
 }

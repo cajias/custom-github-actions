@@ -113,12 +113,9 @@ export interface TriageAnalysis {
 /**
  * GitHub Project V2 field types
  */
-export interface ProjectField {
+export interface ProjectSingleSelectField {
   id: string;
   name: string;
-}
-
-export interface ProjectSingleSelectField extends ProjectField {
   options: Array<{
     id: string;
     name: string;
@@ -131,7 +128,6 @@ export interface ProjectSingleSelectField extends ProjectField {
 export interface ProjectConfig {
   owner: string;
   number: number;
-  id?: string;
 }
 
 /**
